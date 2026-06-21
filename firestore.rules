@@ -1,0 +1,164 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== دالة مساعدة: هل المستخدم الحالي Admin؟ =====
+    function isAdmin() {
+      return request.auth != null &&
+        request.auth.token.email != null &&
+        request.auth.token.email.lower() in [
+          'admin@autorass.com',
+          'michaelmm@gmail.com'
+        ];
+    }
+
+    // ===== دالة مساعدة: هل المستخدم مسجّل دخول؟ =====
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // ===== دالة مساعدة: هل هذا مالك المستند؟ =====
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ===== 1. مجموعة المستخدمين (users) =====
+    match /users/{userId} {
+      // قراءة البيانات مسموح للمالك والأدمن
+      allow read: if isOwner(userId) || isAdmin();
+
+      // الإنشاء: مسموح للمالك بشرط عدم تفعيل الاشتراك أو الحظر يدوياً
+      allow create: if isOwner(userId) && (
+        !('isPaid' in request.resource.data) || request.resource.data.isPaid == false
+      ) && (
+        !('isBlocked' in request.resource.data) || request.resource.data.isBlocked == false
+      ) && (
+        !('subscriptionEnd' in request.resource.data) || request.resource.data.subscriptionEnd == null
+      );
+
+      // التحديث: مسموح للأدمن بالكامل، وللمالك بشرط عدم تعديل الحقول الحساسة
+      allow update: if isAdmin() || (
+        isOwner(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['isPaid', 'isBlocked', 'subscriptionEnd'])
+      );
+
+      // الحذف للأدمن فقط
+      allow delete: if isAdmin();
+    }
+
+    // ===== 2. مجموعة الضيوف (guests) =====
+    match /guests/{guestId} {
+      // قراءة سجل واحد فقط (get) مسموح للجميع
+      allow get: if true;
+
+      // قراءة القائمة كاملة للأدمن فقط
+      allow list: if isAdmin();
+
+      // الإنشاء: مسموح لكن بشرط عدم التلاعب بالحقول الحساسة (يُسمح بـ false أو null كقيم افتراضية)
+      allow create: if
+        (!('isPaid' in request.resource.data) || request.resource.data.isPaid == false) &&
+        (!('isBlocked' in request.resource.data) || request.resource.data.isBlocked == false) &&
+        (!('subscriptionEnd' in request.resource.data) || request.resource.data.subscriptionEnd == null);
+
+      // التحديث: مسموح لكن لا يمكن تغيير الحقول الحساسة
+      allow update: if
+        isAdmin() ||
+        (
+          // الضيف يقدر يعدل بياناته العامة فقط
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['isPaid', 'isBlocked', 'subscriptionEnd'])
+        );
+
+      // الحذف: أدمن فقط
+      allow delete: if isAdmin();
+    }
+
+    // ===== 3. مجموعة المشاريع (projects) =====
+    match /projects/{projectId} {
+      // القراءة: المالك أو الأدمن أو مشاريع الضيوف
+      allow read: if
+        isAdmin() ||
+        (isAuthenticated() && resource.data.ownerId == request.auth.uid) ||
+        (resource.data.ownerType == 'guest');
+
+      // الإنشاء
+      allow create: if
+        isAdmin() ||
+        // مستخدم مسجّل يُنشئ مشروعاً باسمه
+        (isAuthenticated() &&
+          request.resource.data.ownerId == request.auth.uid &&
+          request.resource.data.ownerType == 'registered') ||
+        // ضيف ينشئ مشروعاً
+        (request.resource.data.ownerType == 'guest' &&
+          !('isPaid' in request.resource.data));  // لا يمكن للضيف تعيين isPaid
+
+      // التحديث
+      allow update: if
+        isAdmin() ||
+        (isAuthenticated() &&
+          resource.data.ownerId == request.auth.uid &&
+          request.resource.data.ownerId == request.auth.uid) ||
+        (resource.data.ownerType == 'guest' &&
+          // لا يمكن تغيير ownerType أو ownerId
+          resource.data.ownerType == request.resource.data.ownerType);
+
+      // الحذف: المالك أو الأدمن
+      allow delete: if
+        isAdmin() ||
+        (isAuthenticated() && resource.data.ownerId == request.auth.uid) ||
+        (resource.data.ownerType == 'guest');
+    }
+
+    // ===== 4. مجموعة الكوبونات (coupons) =====
+    match /coupons/{couponId} {
+      // القراءة مفتوحة (لازم للتحقق من الكوبون)
+      allow read: if true;
+
+      // الكتابة للأدمن فقط
+      allow write: if isAdmin();
+    }
+
+    // ===== 5. بصمات الأجهزة (deviceFingerprints) =====
+    match /deviceFingerprints/{visitorId} {
+      // قراءة سجل واحد فقط
+      allow get: if true;
+
+      // القائمة للأدمن فقط
+      allow list: if isAdmin();
+
+      // الإنشاء للأدمن، أو للضيف بشرط عدم وضع حقول حساسة
+      allow create: if
+        isAdmin() ||
+        !('status' in request.resource.data) ||
+        request.resource.data.status == 'trial';  // فقط trial عند الإنشاء
+
+      // التحديث: الأدمن يملك صلاحية كاملة
+      // المستخدم العادي يستطيع:
+      //   - تحديث lastVisit / pdfExports / nestingOperations / projectsCreated (إحصائيات)
+      //   - تحديث status إلى 'expired' فقط (يحدث تلقائياً بالكود عند انتهاء التجربة)
+      //   - لا يستطيع تعيين status إلى 'paid' أو 'blocked' أو 'trial' (يدوياً)
+      allow update: if
+        isAdmin() ||
+        (
+          // الحقول الحساسة: status يُسمح فقط بالتغيير إلى 'expired' (انتهاء تلقائي)
+          // trialEnd و isBlocked محجوزة للأدمن فقط
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['trialEnd', 'isBlocked']) &&
+          (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) ||
+            request.resource.data.status == 'expired'  // الكود يضع expired تلقائياً فقط
+          )
+        );
+
+      // الحذف للأدمن فقط
+      allow delete: if isAdmin();
+    }
+
+    // ===== حظر كل شيء آخر غير مُعرَّف =====
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

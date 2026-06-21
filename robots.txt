@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /css/
+Allow: /js/
+Disallow: /admin.html
+Disallow: /auth.html
+
+Sitemap: https://autorus.free.nf/sitemap.xml

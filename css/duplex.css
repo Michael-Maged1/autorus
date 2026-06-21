@@ -1,0 +1,208 @@
+/* =====================================================
+   اوتو رص - ستايل رص الكروت وجه وظهر (Duplex Imposition)
+   ===================================================== */
+
+.duplex-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* شبكة الإعدادات والرفع */
+.duplex-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: var(--space-lg);
+  align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+  .duplex-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .duplex-form-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .duplex-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* صناديق رفع الملفات */
+.duplex-upload-box {
+  background: var(--bg-input);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all var(--transition-normal);
+  position: relative;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.duplex-upload-box:hover,
+.duplex-upload-box.dragover {
+  border-color: var(--color-primary-400);
+  background: var(--bg-hover);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+
+.duplex-upload-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  text-align: center;
+  width: 100%;
+  height: 100%;
+}
+
+.duplex-upload-preview .upload-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--color-primary-500);
+  margin-bottom: var(--space-sm);
+  opacity: 0.8;
+  transition: transform var(--transition-fast);
+}
+
+.duplex-upload-box:hover .upload-icon {
+  transform: scale(1.08);
+}
+
+.duplex-upload-preview .upload-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.duplex-upload-preview .upload-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* صورة المعاينة بعد الرفع */
+.duplex-image-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  max-height: 200px;
+}
+
+.duplex-preview-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm);
+}
+
+.duplex-remove-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--color-danger);
+  color: white;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: bold;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition-fast), transform var(--transition-fast);
+  z-index: 10;
+}
+
+.duplex-remove-btn:hover {
+  background: #d32f2f;
+  transform: scale(1.1);
+}
+
+/* لوحة النموذج */
+.duplex-form-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--bg-hover);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+/* أزرار تبديل الوجه والظهر */
+.duplex-toggle-bar {
+  display: flex;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  gap: 4px;
+}
+
+.duplex-toggle-btn {
+  padding: 6px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.duplex-toggle-btn:hover {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body.dark-mode .duplex-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.duplex-toggle-btn.active {
+  background: var(--color-primary-600);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+body.dark-mode .duplex-toggle-btn.active {
+  background: var(--color-primary-500);
+}
+
+/* تحسينات الـ Canvas الخاص بالوجه والظهر */
+#duplex-canvas-wrapper {
+  background: #f1f5f9;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-xl);
+  min-height: 500px;
+}
+
+body.dark-mode #duplex-canvas-wrapper {
+  background: #091523;
+}

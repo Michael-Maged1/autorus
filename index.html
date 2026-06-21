@@ -1,0 +1,2781 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40' fill='none'%3E%3Crect x='2' y='2' width='36' height='36' rx='8' fill='url(%23logoGrad)'/%3E%3Crect x='8' y='8' width='10' height='14' rx='2' fill='white' opacity='0.9'/%3E%3Crect x='8' y='24' width='10' height='8' rx='2' fill='white' opacity='0.6'/%3E%3Crect x='21' y='8' width='11' height='8' rx='2' fill='white' opacity='0.7'/%3E%3Crect x='21' y='18' width='11' height='14' rx='2' fill='white' opacity='0.9'/%3E%3Cdefs%3E%3ClinearGradient id='logoGrad' x1='0' y1='0' x2='40' y2='40'%3E%3Cstop offset='0%25' stop-color='%231565C0'/%3E%3Cstop offset='100%25' stop-color='%230D47A1'/%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E" />
+  <meta name="description"
+    content="اوتو رص - نظام الرص الذكي للمطابع. احسب أفضل طريقة رص للكروت والفلايرات والبروشورات بأعلى استغلال وأقل هالك." />
+  <meta name="keywords"
+    content="رص طباعة, مطابع, كروت شخصية, فلايرات, بروشورات, رص ذكي, تعشيش, توفير الورق, حساب تكلفة الطباعة" />
+  <title>اوتو رص - نظام الرص الذكي للمطابع وتوفير الهالك</title>
+
+  <!-- PWA Settings -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1565C0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="أوتو رص" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+
+  <!-- Register Service Worker & Handle Updates -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      let refreshing = false;
+
+      // Handle reload when the service worker changes controller
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          window.location.reload();
+          refreshing = true;
+        }
+      });
+
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then((reg) => {
+            console.log('[PWA] Service Worker Registered', reg);
+
+            // Force check for service worker updates on page load
+            reg.update().catch(() => { });
+
+            // Detect updates when a service worker is waiting
+            if (reg.waiting) {
+              showUpdateToast(reg.waiting);
+            }
+
+            // Detect updates if a new service worker is installing
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    showUpdateToast(newWorker);
+                  }
+                }
+              });
+            });
+          })
+          .catch((err) => console.error('[PWA] Service Worker Registration Failed', err));
+      });
+
+      function showUpdateToast(worker) {
+        if (document.getElementById('pwa-update-toast')) return;
+
+        const toast = document.createElement('div');
+        toast.id = 'pwa-update-toast';
+        toast.innerHTML = `
+          <div style="
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            background: #ffffff;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 16px 20px;
+            border-radius: 12px;
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            direction: rtl;
+            font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+          ">
+            <span style="font-size: 1.25rem;">✨</span>
+            <div>
+              <h4 style="margin: 0 0 4px 0; font-size: 0.95rem; font-weight: 700; color: #1e293b;">تحديث جديد متوفر!</h4>
+              <p style="margin: 0; font-size: 0.8rem; color: #64748b;">قم بالتحديث للحصول على أحدث الميزات والإصلاحات.</p>
+            </div>
+            <button id="pwa-update-btn" style="
+              background: #1565C0;
+              color: white;
+              border: none;
+              padding: 8px 16px;
+              border-radius: 8px;
+              font-size: 0.8rem;
+              font-weight: 700;
+              cursor: pointer;
+              white-space: nowrap;
+              transition: opacity 0.2s;
+            ">تحديث الآن</button>
+          </div>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Inherit dark-mode style dynamically if enabled
+        const isDarkMode = document.body.classList.contains('dark-mode') || localStorage.getItem('theme') === 'dark';
+        if (isDarkMode) {
+          const innerDiv = toast.querySelector('div');
+          if (innerDiv) {
+            innerDiv.style.background = '#1e293b';
+            innerDiv.style.color = '#f8fafc';
+            innerDiv.style.borderColor = '#334155';
+            innerDiv.querySelector('h4').style.color = '#f8fafc';
+            innerDiv.querySelector('p').style.color = '#94a3b8';
+          }
+        }
+
+        document.getElementById('pwa-update-btn').addEventListener('click', () => {
+          worker.postMessage({ type: 'SKIP_WAITING' });
+          toast.remove();
+        });
+      }
+    }
+  </script>
+
+  <!-- PWA Install Prompt Handler -->
+  <script>
+    // Store the deferred prompt event globally
+    window._pwaInstallPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent Chrome 67 and earlier from automatically showing the prompt
+      e.preventDefault();
+      // Stash the event so it can be triggered later
+      window._pwaInstallPrompt = e;
+      // Show the install button
+      const installBtn = document.getElementById('pwa-install-btn');
+      if (installBtn) {
+        installBtn.style.display = 'inline-flex';
+      }
+    });
+
+    window.addEventListener('appinstalled', () => {
+      // Hide the install button after successful installation
+      const installBtn = document.getElementById('pwa-install-btn');
+      if (installBtn) installBtn.style.display = 'none';
+      window._pwaInstallPrompt = null;
+      console.log('[PWA] App installed successfully.');
+    });
+
+    // Attach click handler once DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      const installBtn = document.getElementById('pwa-install-btn');
+      if (!installBtn) return;
+
+      installBtn.addEventListener('click', async () => {
+        const prompt = window._pwaInstallPrompt;
+        if (!prompt) return;
+        // Show the native install prompt
+        prompt.prompt();
+        // Wait for the user to respond
+        const { outcome } = await prompt.userChoice;
+        console.log('[PWA] Install prompt outcome:', outcome);
+        if (outcome === 'accepted') {
+          installBtn.style.display = 'none';
+          window._pwaInstallPrompt = null;
+        }
+      });
+    });
+  </script>
+
+
+  <!-- SEO & Canonical Link -->
+  <link rel="canonical" href="https://autorus.free.nf/" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://autorus.free.nf/" />
+  <!-- قم بتغيير هذا الرابط إلى رابط موقعك النهائي عند الرفع -->
+  <meta property="og:title" content="اوتو رص - نظام الرص الذكي للمطابع وتوفير الهالك" />
+  <meta property="og:description"
+    content="احسب أفضل طريقة رص لمنتجاتك (كروت، فلايرات، بروشورات) بأعلى نسبة استغلال لفرخ الورق وأقل هالك ممكن." />
+  <meta property="og:image" content="https://autorus.free.nf/og-image.jpg" />
+  <!-- تم تغيير الصورة إلى og-image.jpg وتخفيض حجمها لأقل من 300 كيلوبايت لتعمل على واتساب -->
+  <meta property="og:image:width" content="1024" />
+  <meta property="og:image:height" content="1024" />
+  <meta property="og:site_name" content="اوتو رص" />
+  <meta property="og:locale" content="ar_AR" />
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://autorus.free.nf/" />
+  <meta name="twitter:title" content="اوتو رص - نظام الرص الذكي للمطابع وتوفير الهالك" />
+  <meta name="twitter:description"
+    content="احسب أفضل طريقة رص لمنتجاتك بأعلى نسبة استغلال لفرخ الورق وأقل هالك ممكن." />
+  <meta name="twitter:image" content="https://autorus.free.nf/og-image.jpg" />
+
+  <!-- JSON-LD Structured Data (Schema.org) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "أوتو رص",
+    "alternateName": "Auto Rass",
+    "url": "https://autorus.free.nf/",
+    "image": "https://autorus.free.nf/og-image.jpg",
+    "description": "نظام الرص الذكي للمطابع لحساب أفضل طريقة ترتيب ورص للكروت الشخصية، الفلايرات والبروشورات بأعلى نسبة استغلال لفرخ الورق وأقل هالك.",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "All",
+    "browserRequirements": "Requires JavaScript. Requires HTML5.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EGP"
+    }
+  }
+  </script>
+
+  <!-- Google Fonts: Cairo & IBM Plex Sans Arabic only (used in CSS) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/canvas.css" />
+  <link rel="stylesheet" href="css/booklet.css" />
+  <link rel="stylesheet" href="css/vdp.css" />
+  <link rel="stylesheet" href="css/duplex.css" />
+
+  <!-- External Libraries: PDF.js & jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+
+  <!-- Firebase App, Firestore, and Auth (Compat Version) - v10.14.1 -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+  <!-- Paywall Custom CSS Styles -->
+  <style>
+    .paywall-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      z-index: 99999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-y: auto;
+      padding: 20px 16px;
+    }
+
+    .paywall-container {
+      background: var(--bg-card, #ffffff);
+      border: 1px solid var(--border-color, #e2e8f0);
+      border-radius: 16px;
+      max-width: 580px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.4);
+      text-align: center;
+      color: var(--text-primary, #1e293b);
+      animation: modalEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      max-height: 94vh;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+
+    .dark-mode .paywall-container {
+      background: #192231;
+      border-color: #2d3748;
+      color: #f8fafc;
+    }
+
+    .paywall-header h2 {
+      font-size: 1.35rem;
+      margin: 12px 0 8px;
+      font-weight: 700;
+    }
+
+    .paywall-header p {
+      font-size: 0.88rem;
+      color: var(--text-secondary, #64748b);
+      max-width: 480px;
+      margin: 0 auto 16px;
+      line-height: 1.5;
+    }
+
+    .paywall-logo-icon {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto;
+    }
+
+    .paywall-status {
+      display: inline-block;
+      background: var(--bg-hover, #f1f5f9);
+      padding: 5px 12px;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      border: 1px solid var(--border-color, #e2e8f0);
+    }
+
+    .dark-mode .paywall-status {
+      background: #2d3748;
+      border-color: #4a5568;
+    }
+
+    .pricing-grid {
+      display: flex;
+      flex-direction: row;
+      gap: 16px;
+      margin-bottom: 24px;
+      width: 100%;
+    }
+
+    .pricing-card {
+      border: 2px solid var(--border-color, #e2e8f0);
+      border-radius: 12px;
+      padding: 20px 16px;
+      text-align: right;
+      position: relative;
+      transition: all 0.3s ease;
+      background: var(--bg-card, #ffffff);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-width: 0;
+    }
+
+    .dark-mode .pricing-card {
+      border-color: #2d3748;
+      background: #192231;
+    }
+
+    .pricing-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--color-primary, #1565C0);
+      box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .pricing-card.popular {
+      border-color: var(--color-primary, #1565C0);
+      background: linear-gradient(to bottom, var(--bg-card, #ffffff), #f0f7ff);
+    }
+
+    .dark-mode .pricing-card.popular {
+      background: linear-gradient(to bottom, #192231, #1e3a8a22);
+    }
+
+    .pricing-badge {
+      position: absolute;
+      top: -10px;
+      left: 16px;
+      background: var(--color-primary, #1565C0);
+      color: white;
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .plan-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .plan-price {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--color-primary, #1565C0);
+      margin-bottom: 12px;
+    }
+
+    .plan-price span {
+      font-size: 0.82rem;
+      font-weight: 400;
+      color: var(--text-secondary, #64748b);
+    }
+
+    .plan-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary, #64748b);
+      line-height: 1.45;
+      margin-bottom: 16px;
+      min-height: 48px;
+    }
+
+    .activation-section {
+      border-top: 1px dashed var(--border-color, #e2e8f0);
+      padding-top: 20px;
+      text-align: right;
+    }
+
+    .dark-mode .activation-section {
+      border-color: #2d3748;
+    }
+
+    .activation-section h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .activation-section p {
+      font-size: 0.85rem;
+      color: var(--text-secondary, #64748b);
+      margin-bottom: 12px;
+    }
+
+    .activation-form {
+      display: flex;
+      gap: 12px;
+    }
+
+    .activation-form .form-input {
+      flex: 1;
+    }
+
+    .vodafone-number-badge {
+      font-size: 1.1rem;
+      color: #d32f2f;
+      background: #ffebee;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      direction: ltr;
+    }
+
+    .dark-mode .vodafone-number-badge {
+      background: #3a1c1c;
+      color: #ef4444;
+    }
+
+    .paywall-whatsapp-btn {
+      background: var(--color-primary, #1565C0);
+      color: white;
+      border: none;
+      font-weight: bold;
+      font-size: 1.05rem;
+      padding: 10px 24px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(21, 101, 192, 0.25);
+      transition: all 0.2s ease;
+      width: auto;
+      max-width: 100%;
+    }
+
+    .paywall-whatsapp-btn:hover {
+      background: #115293;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(21, 101, 192, 0.35);
+    }
+
+    .paywall-whatsapp-btn:active {
+      transform: translateY(0);
+    }
+
+    @media (max-width: 640px) {
+      .paywall-overlay {
+        padding: 8px;
+      }
+
+      .paywall-container {
+        padding: 18px 14px;
+        border-radius: 12px;
+        max-height: 96vh;
+      }
+
+      .paywall-logo-icon {
+        width: 44px;
+        height: 44px;
+      }
+
+      .paywall-header h2 {
+        font-size: 1.2rem;
+        margin: 8px 0 4px;
+      }
+
+      .paywall-header p {
+        font-size: 0.82rem;
+        margin-bottom: 12px;
+      }
+
+      .paywall-status {
+        margin-bottom: 14px;
+        font-size: 0.72rem;
+        padding: 4px 10px;
+      }
+
+      .pricing-grid {
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .pricing-card {
+        padding: 14px 12px;
+      }
+
+      .plan-name {
+        font-size: 0.95rem;
+        margin-bottom: 4px;
+      }
+
+      .plan-price {
+        font-size: 1.35rem;
+        margin-bottom: 6px;
+      }
+
+      .plan-desc {
+        font-size: 0.76rem;
+        min-height: auto;
+        margin-bottom: 10px;
+      }
+
+      .activation-section {
+        padding-top: 14px;
+      }
+
+      .activation-section h3 {
+        font-size: 0.95rem;
+      }
+
+      .activation-section p {
+        font-size: 0.78rem;
+      }
+
+      .activation-form {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .paywall-whatsapp-btn {
+        font-size: 0.95rem;
+        padding: 8px 20px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+    }
+
+    /* Floating Support Container */
+    .support-widget {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .support-widget:active {
+      cursor: grabbing;
+    }
+
+    .support-float-btn {
+      background: #25D366;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 50px;
+      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.8rem;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .support-float-btn:hover {
+      background: #20ba5a;
+      box-shadow: 0 6px 12px rgba(37, 211, 102, 0.4);
+    }
+
+    .support-float-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Close Support Button */
+    .close-support-btn {
+      width: 20px;
+      height: 20px;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+      transition: all 0.2s ease;
+      order: 2;
+      /* Ensures the close button renders on the left side of the widget */
+    }
+
+    .close-support-btn:hover {
+      background: #dc2626;
+      transform: scale(1.1);
+    }
+
+    @media (max-width: 640px) {
+      .support-widget {
+        bottom: 80px;
+        /* Elevated on mobile to float above bottom navigation bar */
+        left: 16px;
+        gap: 4px;
+      }
+
+      .support-float-btn {
+        padding: 10px;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        justify-content: center;
+        box-sizing: border-box;
+      }
+
+      .support-float-btn span {
+        display: none;
+      }
+
+      .support-float-btn svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .close-support-btn {
+        width: 18px;
+        height: 18px;
+        font-size: 10px;
+      }
+    }
+
+    /* PWA Install Button Glow Animation */
+    @keyframes pwaGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(21, 101, 192, 0.5); }
+      50% { box-shadow: 0 0 0 8px rgba(21, 101, 192, 0); }
+    }
+    #pwa-install-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(21, 101, 192, 0.4) !important;
+    }
+    #pwa-install-btn:active {
+      transform: scale(0.97);
+    }
+    @media (max-width: 640px) {
+      #pwa-install-btn span { display: none; }
+      #pwa-install-btn { padding: 8px 10px; }
+    }
+  </style>
+</head>
+
+<body class="light-mode has-sidebar" id="app-body">
+  <script>
+    (function() {
+      try {
+        var theme = localStorage.getItem('theme');
+        if (theme === 'dark') {
+          document.body.classList.remove('light-mode');
+          document.body.classList.add('dark-mode');
+        }
+        document.documentElement.setAttribute('dir', 'rtl');
+        document.documentElement.setAttribute('lang', 'ar');
+        document.body.classList.remove('ltr-mode');
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  </script>
+
+  <!-- ===== HEADER ===== -->
+  <header class="app-header" id="app-header">
+    <div class="header-brand">
+      <button class="sidebar-toggle" id="sidebar-toggle" aria-label="قائمة جانبية" title="تبديل القائمة">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </button>
+      <div class="logo-wrap">
+        <svg class="logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="36" height="36" rx="8" fill="url(#logoGrad)" />
+          <rect x="8" y="8" width="10" height="14" rx="2" fill="white" opacity="0.9" />
+          <rect x="8" y="24" width="10" height="8" rx="2" fill="white" opacity="0.6" />
+          <rect x="21" y="8" width="11" height="8" rx="2" fill="white" opacity="0.7" />
+          <rect x="21" y="18" width="11" height="14" rx="2" fill="white" opacity="0.9" />
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="40" y2="40">
+              <stop offset="0%" stop-color="#1565C0" />
+              <stop offset="100%" stop-color="#0D47A1" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="logo-text">
+          <span class="logo-main" data-i18n="logo_main">اوتو رص</span>
+          <span class="logo-sub" data-i18n="logo_sub">الرص الذكي للمطابع</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="header-nav">
+      <button class="nav-btn active" id="nav-calculator" data-tab="calculator" title="حاسبة الرص">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="3" />
+          <line x1="3" y1="9" x2="21" y2="9" />
+          <line x1="9" y1="21" x2="9" y2="9" />
+        </svg>
+        <span data-i18n="nav_calculator">أداة الرص</span>
+      </button>
+      <button class="nav-btn" id="nav-duplex" data-tab="duplex" title="رص وجه وظهر">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <path d="M9 3v18M15 3v18" />
+        </svg>
+        <span data-i18n="nav_duplex">رص وجه وظهر</span>
+      </button>
+      <button class="nav-btn" id="nav-booklet" data-tab="booklet" title="صانع الكتيبات">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+        </svg>
+        <span data-i18n="nav_booklet">صانع الكتيبات</span>
+      </button>
+      <button class="nav-btn" id="nav-vdp" data-tab="vdp" title="بيانات متغيرة VDP">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <path d="M7 7h10M7 12h10M7 17h6" />
+        </svg>
+        <span data-i18n="nav_vdp">بيانات متغيرة</span>
+      </button>
+      <button class="nav-btn" id="nav-projects" data-tab="projects" title="المشاريع">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+        </svg>
+        <span data-i18n="nav_projects">المشاريع</span>
+      </button>
+      <button class="nav-btn" id="nav-settings" data-tab="settings" title="الإعدادات">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+        </svg>
+        <span data-i18n="nav_settings">الإعدادات</span>
+      </button>
+
+      <button class="nav-btn" id="nav-subscription" data-tab="subscription" title="الاشتراك">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <line x1="16" y1="2" x2="16" y2="4" />
+          <line x1="8" y1="2" x2="8" y2="4" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+        <span data-i18n="nav_subscription">الاشتراك</span>
+      </button>
+
+    </nav>
+
+    <div class="header-actions">
+      <!-- User Auth State -->
+      <div id="user-auth-section"
+        style="display: flex; align-items: center; gap: 8px; margin-left: 12px; margin-right: 12px;">
+        <a href="admin.html" class="btn btn-ghost btn-sm" id="btn-admin-link"
+          style="padding: 6px 12px; font-size: 0.8rem; display: none; color: #d97706; font-weight: bold; border: 1px solid rgba(217, 119, 6, 0.3);">لوحة
+          التحكم ⚡</a>
+
+        <span id="user-display-name"
+          style="font-size: 0.8rem; font-weight: 500; display: none; background: var(--bg-hover, #f1f5f9); padding: 4px 10px; border-radius: 6px;"></span>
+        <button class="btn btn-primary btn-sm" id="btn-login-trigger"
+          style="padding: 6px 12px; font-size: 0.8rem; background: var(--color-primary, #1565C0); color: white; border: none;">تسجيل الدخول</button>
+        <button class="btn btn-secondary btn-sm" id="btn-register-trigger"
+          style="padding: 6px 12px; font-size: 0.8rem;">إنشاء حساب</button>
+        <button class="btn btn-ghost btn-sm" id="btn-logout-trigger"
+          style="padding: 6px 12px; font-size: 0.8rem; display: none;">خروج</button>
+      </div>
+
+      <!-- PWA Install Button -->
+      <button id="pwa-install-btn" aria-label="تثبيت التطبيق" title="ثبّت التطبيق على جهازك" style="
+        display: none;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 7px 16px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        box-shadow: 0 0 0 0 rgba(21, 101, 192, 0.5);
+        animation: pwaGlow 2.5s ease-in-out infinite;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        font-family: inherit;
+      ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:16px;height:16px;flex-shrink:0;">
+          <path d="M12 2v13M8 11l4 4 4-4"/>
+          <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+        </svg>
+        <span>ثبّت التطبيق</span>
+      </button>
+
+      <button class="icon-btn" id="theme-toggle" title="تبديل الوضع الليلي" aria-label="تبديل الوضع الليلي">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5" />
+          <line x1="12" y1="1" x2="12" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" />
+          <line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        </svg>
+      </button>
+      <button class="btn btn-primary" id="btn-save-project" title="حفظ المشروع">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+          <polyline points="17 21 17 13 7 13 7 21" />
+          <polyline points="7 3 7 8 15 8" />
+        </svg>
+        <span>حفظ</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== MAIN LAYOUT ===== -->
+  <div class="app-layout" id="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- Paper Settings -->
+      <section class="sidebar-section" id="section-paper">
+        <div class="section-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+          </svg>
+          <h2 data-i18n="sec_paper_title">إعدادات الورقة</h2>
+          <button class="section-toggle" data-target="paper-body" aria-label="طي القسم">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+        <div class="section-body" id="paper-body">
+          <!-- Quick Size Presets -->
+          <div class="form-group">
+            <label class="form-label" data-i18n="lbl_presets">مقاسات جاهزة</label>
+            <div class="preset-grid" id="paper-presets">
+              <button class="preset-btn" data-w="21.0" data-h="29.7" data-name="A4">A4</button>
+              <button class="preset-btn" data-w="29.7" data-h="42.0" data-name="A3">A3</button>
+              <button class="preset-btn" data-w="42.0" data-h="59.4" data-name="A2">A2</button>
+              <button class="preset-btn" data-w="50.0" data-h="70.0" data-name="نصف فرخ">½ فرخ (50×70)</button>
+              <button class="preset-btn" data-w="100.0" data-h="70.0" data-name="فرخ كامل">فرخ كامل (100×70)</button>
+              <button class="preset-btn active" data-w="50.0" data-h="35.0" data-name="ربع فرخ">¼ فرخ (50×35)</button>
+              <button class="preset-btn" data-w="25.0" data-h="35.0" data-name="تمن فرخ">⅛ فرخ (25×35)</button>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="paper-width"><span data-i18n="lbl_width">العرض</span> (<span class="unit-text">سم</span>)</label>
+              <input type="number" id="paper-width" class="form-input" value="50" min="5" max="200" step="0.1" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="paper-height"><span data-i18n="lbl_height">الارتفاع</span> (<span class="unit-text">سم</span>)</label>
+              <input type="number" id="paper-height" class="form-input" value="35" min="5" max="200" step="0.1" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="paper-orientation" data-i18n="lbl_orientation">الاتجاه</label>
+            <select id="paper-orientation" class="form-select">
+              <option value="portrait" data-i18n="opt_portrait">عمودي (Portrait)</option>
+              <option value="landscape" data-i18n="opt_landscape">أفقي (Landscape)</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Print Settings -->
+      <section class="sidebar-section" id="section-print">
+        <div class="section-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 6 2 18 2 18 9" />
+            <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2" />
+            <rect x="6" y="14" width="12" height="8" />
+          </svg>
+          <h2>إعدادات الطباعة</h2>
+          <button class="section-toggle" data-target="print-body" aria-label="طي القسم">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+        <div class="section-body" id="print-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="bleed">Bleed (<span class="unit-text">سم</span>)</label>
+              <input type="number" id="bleed" class="form-input" value="0" min="0" max="2" step="0.05" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="gutter">Gutter (<span class="unit-text">سم</span>)</label>
+              <input type="number" id="gutter" class="form-input" value="0" min="0" max="3" step="0.05" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="safe-margin">Safe Margin (<span class="unit-text">سم</span>)</label>
+              <input type="number" id="safe-margin" class="form-input" value="0" min="0" max="2" step="0.05" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="paper-margin">هامش الورقة (<span class="unit-text">سم</span>)</label>
+              <input type="number" id="paper-margin" class="form-input" value="0" min="0" max="5" step="0.1" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="auto-repeat" checked />
+              <span class="checkmark"></span>
+              تكرار المنتجات لملء الورقة بالكامل
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="crop-marks" checked />
+              <span class="checkmark"></span>
+              إضافة علامات القص (Crop Marks)
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="guillotine-mode" checked />
+              <span class="checkmark"></span>
+              نمط القص المستقيم (Guillotine)
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cost Calculator -->
+      <section class="sidebar-section" id="section-cost">
+        <div class="section-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+          </svg>
+          <h2 data-i18n="sec_cost_title">حساب التكلفة</h2>
+          <button class="section-toggle" data-target="cost-body" aria-label="طي القسم">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+        <div class="section-body" id="cost-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="cost-sheet"><span data-i18n="lbl_cost_sheet">سعر الفرخ</span> (<span class="currency-text">ج.م</span>)</label>
+              <input type="number" id="cost-sheet" class="form-input" value="0" min="0" step="0.1" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cost-print"><span data-i18n="lbl_cost_print">تكلفة الطباعة</span> (<span class="currency-text">ج.م</span>)</label>
+              <input type="number" id="cost-print" class="form-input" value="0" min="0" step="1" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cost-finish"><span data-i18n="lbl_cost_finish">تكلفة التشطيب</span> (<span class="currency-text">ج.م</span>)</label>
+            <input type="number" id="cost-finish" class="form-input" value="0" min="0" step="1" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="currency" data-i18n="lbl_currency">العملة</label>
+            <select id="currency" class="form-select">
+              <option value="ج.م">جنيه مصري (ج.م)</option>
+              <option value="ر.س">ريال سعودي (ر.س)</option>
+              <option value="د.إ">درهم إماراتي (د.إ)</option>
+              <option value="د.ك">دينار كويتي (د.ك)</option>
+              <option value="$">دولار أمريكي ($)</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="main-content" id="main-content">
+
+      <!-- TAB: Calculator -->
+      <div class="tab-panel active" id="tab-calculator">
+
+        <!-- Products Section -->
+        <div class="content-card" id="products-card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              <h2 data-i18n="title_products">المنتجات</h2>
+              <span class="badge" id="products-count">0 منتج</span>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-primary btn-sm" id="btn-import-file" title="رفع ملف لاستخراج المقاسات">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span data-i18n="btn_import_file">رفع ملف</span>
+              </button>
+              <input type="file" id="file-upload" accept=".pdf,.svg,.png,.jpg,.jpeg,.ai,.eps" style="display:none"
+                multiple />
+              <button class="btn btn-ghost btn-sm" id="btn-bulk-resize" title="تغيير مقاس جميع المنتجات دفعة واحدة">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                </svg>
+                تغيير المقاس للكل
+              </button>
+              <button class="btn btn-ghost btn-sm" id="btn-bulk-rotate"
+                title="التحكم في تدوير جميع المنتجات دفعة واحدة">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                </svg>
+                تدوير الكل
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btn-add-preset-product" title="إضافة منتج جاهز" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                منتج جاهز
+              </button>
+              <button class="btn btn-ghost btn-sm" id="btn-add-product" title="إضافة منتج مخصص" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                إضافة منتج
+              </button>
+            </div>
+          </div>
+
+          <!-- Products List -->
+          <div id="products-list" class="products-list">
+            <!-- Dynamic product items -->
+            <div class="empty-state" id="products-empty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <path d="M8 21h8M12 17v4" />
+              </svg>
+              <p>لا توجد منتجات بعد</p>
+              <small style="margin-bottom: var(--space-md);">اضغط "رفع ملف" لبدء الرص</small>
+              <button class="btn btn-primary" id="btn-import-file-empty" title="رفع ملف لاستخراج المقاسات">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; stroke: currentColor;">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span>رفع ملف</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calculate Button -->
+        <div class="action-bar">
+          <button class="btn btn-calculate" id="btn-calculate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+            <span data-i18n="btn_calculate">احسب الرص الأمثل</span>
+          </button>
+          <button class="btn btn-ghost" id="btn-compare-sizes" title="قارن بين أحجام الورق">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 20V10M12 20V4M6 20v-6" />
+            </svg>
+            <span data-i18n="btn_compare_sizes">قارن الأحجام</span>
+          </button>
+          <button class="btn btn-ghost" id="btn-reset" title="إعادة تعيين">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+            </svg>
+            <span data-i18n="btn_reset">إعادة تعيين</span>
+          </button>
+        </div>
+
+        <!-- AI Advisor -->
+        <div class="ai-advisor" id="ai-advisor" style="display:none">
+          <div class="ai-header">
+            <div class="ai-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a10 10 0 100 20A10 10 0 0012 2z" />
+                <path d="M12 8v4M12 16h.01" />
+              </svg>
+            </div>
+            <span>اقتراحات المساعد الذكي</span>
+            <button class="close-btn" id="close-advisor">✕</button>
+          </div>
+          <div id="ai-suggestions" class="ai-suggestions"></div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="results-section" style="display:none">
+
+          <!-- Stats Cards -->
+          <div class="stats-grid" id="stats-grid">
+            <div class="stat-card efficiency">
+              <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              </div>
+              <div class="stat-value" id="stat-efficiency">—</div>
+              <div class="stat-label">نسبة الاستغلال</div>
+            </div>
+            <div class="stat-card waste">
+              <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" />
+                </svg>
+              </div>
+              <div class="stat-value" id="stat-waste">—</div>
+              <div class="stat-label">نسبة الهالك</div>
+            </div>
+            <div class="stat-card pieces">
+              <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="3" width="9" height="9" rx="1" />
+                  <rect x="13" y="3" width="9" height="9" rx="1" />
+                  <rect x="2" y="14" width="9" height="9" rx="1" />
+                  <rect x="13" y="14" width="9" height="9" rx="1" />
+                </svg>
+              </div>
+              <div class="stat-value" id="stat-pieces">—</div>
+              <div class="stat-label">قطعة في الورقة</div>
+            </div>
+            <div class="stat-card sheets">
+              <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+              </div>
+              <div class="stat-value" id="stat-sheets">—</div>
+              <div class="stat-label">عدد الأوراق</div>
+            </div>
+          </div>
+
+          <!-- Cost Results -->
+          <div class="cost-results" id="cost-results">
+            <h3>تفاصيل التكلفة</h3>
+            <div class="cost-grid" id="cost-grid"></div>
+          </div>
+
+          <!-- Canvas Section -->
+          <div class="canvas-section" id="canvas-section">
+            <div class="canvas-toolbar">
+              <div class="canvas-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="2" width="20" height="20" rx="2" />
+                </svg>
+                <span>مخطط الرص</span>
+              </div>
+              <div class="canvas-controls">
+                <button class="canvas-btn" id="canvas-zoom-in" title="تكبير">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    <line x1="11" y1="8" x2="11" y2="14" />
+                    <line x1="8" y1="11" x2="14" y2="11" />
+                  </svg>
+                </button>
+                <button class="canvas-btn" id="canvas-zoom-out" title="تصغير">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    <line x1="8" y1="11" x2="14" y2="11" />
+                  </svg>
+                </button>
+                <button class="canvas-btn" id="canvas-reset-view" title="إعادة ضبط العرض">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                  </svg>
+                </button>
+                <span class="zoom-label" id="zoom-label">100%</span>
+                <div class="canvas-separator"></div>
+                <button class="canvas-btn" id="btn-export-png" title="تصدير PNG">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  <span>PNG</span>
+                </button>
+                <button class="canvas-btn print-ready-btn" id="btn-export-pdf"
+                  title="تصدير ملف PDF بجودة 300 DPI مناسب للطباعة">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                  </svg>
+                  <span>تصدير PDF (300 DPI)</span>
+                </button>
+                <button class="canvas-btn print-ready-btn" id="btn-export-print"
+                  title="تصدير صورة JPG بجودة 300 DPI مناسبة للطباعة">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                  </svg>
+                  <span>تصدير JPG (300 DPI)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Multi-page tabs -->
+            <div class="page-tabs-bar" id="page-tabs-bar" style="display:none">
+              <span class="page-tabs-label">الورقة:</span>
+              <div class="page-tabs" id="page-tabs"></div>
+            </div>
+
+            <div class="canvas-wrapper" id="canvas-wrapper">
+              <canvas id="packing-canvas"></canvas>
+              <div class="canvas-tooltip" id="canvas-tooltip"></div>
+            </div>
+
+            <!-- Cut Order Legend -->
+            <div class="cut-legend" id="cut-legend">
+              <h4>ترتيب القص</h4>
+              <div id="cut-steps" class="cut-steps"></div>
+            </div>
+          </div>
+
+          <!-- Comparison Table -->
+          <div class="comparison-section" id="comparison-section" style="display:none">
+            <h3>مقارنة أحجام الورق</h3>
+            <div class="comparison-grid" id="comparison-grid"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TAB: Projects -->
+      <div class="tab-panel" id="tab-projects">
+        <div class="content-card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              </svg>
+              <h2>المشاريع المحفوظة</h2>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-primary btn-sm" id="btn-new-project">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                مشروع جديد
+              </button>
+            </div>
+          </div>
+          <div id="projects-list" class="projects-list">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              </svg>
+              <p>لا توجد مشاريع محفوظة</p>
+              <small>احفظ مشروعك الحالي لتجده هنا لاحقاً</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Settings -->
+      <div class="tab-panel" id="tab-settings">
+        <div class="content-card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+              </svg>
+              <h2>إعدادات التطبيق</h2>
+            </div>
+          </div>
+          <div class="settings-grid">
+            <div class="settings-section">
+              <h3>بيانات الحساب</h3>
+              <div class="form-group">
+                <label class="form-label" for="user-settings-name">الاسم / اسم المطبعة</label>
+                <input type="text" id="user-settings-name" class="form-input"
+                  placeholder="اسمك الكامل أو اسم المطبعة" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="user-settings-phone">رقم الهاتف</label>
+                <input type="text" id="user-settings-phone" class="form-input" placeholder="مثال: 010xxxxxxxx" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="user-settings-email">البريد الإلكتروني</label>
+                <input type="email" id="user-settings-email" class="form-input" readonly disabled
+                  style="opacity: 0.6; cursor: not-allowed; direction: ltr; text-align: right;" />
+              </div>
+            </div>
+            <div class="settings-section">
+              <h3>العرض</h3>
+              <div class="form-group">
+                <label class="form-label">وحدة القياس</label>
+                <select id="unit-select" class="form-select">
+                  <option value="mm">ملم (mm)</option>
+                  <option value="cm" selected>سم (cm)</option>
+                  <option value="inch">بوصة (inch)</option>
+                  <option value="px">بكسل (px)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">دقة العرض على Canvas</label>
+                <select id="canvas-quality" class="form-select">
+                  <option value="1">عادي</option>
+                  <option value="2" selected>عالي (×2)</option>
+                  <option value="3">فائق (×3)</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-section">
+              <h3>الرص</h3>
+              <div class="form-group">
+                <label class="form-label">خوارزمية الرص</label>
+                <select id="algo-select" class="form-select">
+                  <option value="auto" selected>تلقائي (الأفضل)</option>
+                  <option value="guillotine">Guillotine Cutting</option>
+                  <option value="bl">Bottom-Left</option>
+                  <option value="shelf">Shelf Algorithm</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">عدد محاولات التحسين</label>
+                <select id="iterations-select" class="form-select">
+                  <option value="100">سريع (100)</option>
+                  <option value="500" selected>متوازن (500)</option>
+                  <option value="1000">دقيق (1000)</option>
+                  <option value="5000">فائق الدقة (5000)</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-section">
+              <h3>التصدير</h3>
+              <div class="form-group">
+                <label class="form-label">دقة تصدير PNG</label>
+                <select id="export-dpi" class="form-select">
+                  <option value="72">72 DPI (شاشة)</option>
+                  <option value="150">150 DPI (متوسط)</option>
+                  <option value="300" selected>300 DPI (طباعة)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>إدارة البيانات</h3>
+              <div class="settings-actions">
+                <button class="btn btn-secondary" id="btn-export-data">تصدير كل البيانات</button>
+                <button class="btn btn-ghost" id="btn-import-data">استيراد بيانات</button>
+                <button class="btn btn-danger" id="btn-clear-data">مسح كل البيانات</button>
+                <input type="file" id="import-data-file" accept=".json" style="display:none" />
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Subscription -->
+      <div class="tab-panel" id="tab-subscription">
+        <div class="content-card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <line x1="16" y1="2" x2="16" y2="4" />
+                <line x1="8" y1="2" x2="8" y2="4" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              <h2>إدارة الاشتراك والترخيص</h2>
+            </div>
+          </div>
+          <div class="settings-grid">
+            <div class="settings-section" style="grid-column: 1 / -1;">
+              <h3>باقات الاشتراك المتاحة</h3>
+              <p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:20px;">
+                اشترك الآن للحصول على وصول كامل لجميع ميزات التصدير والطباعة بجودة 300 DPI بدون علامات مائية.
+              </p>
+
+              <div class="pricing-grid" style="margin-bottom: 30px;">
+                <!-- Monthly Plan -->
+                <div class="pricing-card" id="plan-monthly-panel">
+                  <div class="pricing-badge">الأكثر مرونة</div>
+                  <div class="plan-name">الاشتراك الشهري</div>
+                  <div class="plan-price"
+                    style="font-size: 2rem; font-weight: bold; color: var(--color-primary, #1565C0); margin: 15px 0; text-align: center;">
+                    49 ج.م <span>/ شهرياً</span></div>
+                  <p class="plan-desc">رص لا محدود للمنتجات، تصدير PDF بجودة 300 DPI بدون علامات مائية، دعم فني متكامل.
+                  </p>
+                  <button class="btn btn-primary"
+                    style="margin: 15px auto 0; display: block; max-width: 200px; width: 100%; text-align: center;"
+                    onclick="window.ProtectionSystem.subscribePlan('monthly')">اشترك شهرياً</button>
+                </div>
+
+                <!-- Yearly Plan -->
+                <div class="pricing-card popular" id="plan-yearly-panel">
+                  <div class="pricing-badge">توفير كبير</div>
+                  <div class="plan-name">الاشتراك السنوي</div>
+                  <div class="plan-price"
+                    style="font-size: 2rem; font-weight: bold; color: var(--color-primary, #1565C0); margin: 15px 0; text-align: center;">
+                    499 ج.م <span>/ سنوياً</span></div>
+                  <p class="plan-desc">وفر الكثير مع الباقة السنوية! استمتع بجميع الميزات الاحترافية لمدة عام كامل بلا
+                    انقطاع.</p>
+                  <button class="btn btn-primary"
+                    style="margin: 15px auto 0; display: block; max-width: 200px; width: 100%; text-align: center;"
+                    onclick="window.ProtectionSystem.subscribePlan('yearly')">اشترك سنوياً ووفر</button>
+                </div>
+              </div>
+
+              <!-- Payment steps -->
+              <div class="activation-section"
+                style="border-top: 1px dashed var(--border-color, #e2e8f0); padding-top: 20px;">
+                <h3 style="margin-bottom: 10px;">طريقة الدفع الفودافون كاش 📱</h3>
+                <p style="font-size: 0.95rem; line-height: 1.6;">
+                  1. قم بتحويل مبلغ الاشتراك (<strong>49 جنيه</strong> للشهري أو <strong>499 جنيه</strong> للسنوي) إلى
+                  الرقم التالي:<br>
+                  <strong
+                    style="font-size: 1.2rem; color: #d32f2f; background: #ffebee; padding: 2px 8px; border-radius: 4px;">01091968846</strong><br>
+                  2. بعد إتمام عملية التحويل، حدد الباقة المحولة واضغط على زر <strong>"لقد قمت بالتحويل وتفعيل
+                    الاشتراك"</strong> بالأسفل.<br>
+                  3. سيتم فتح محادثة واتساب لتأكيد الدفع يدويًا وتفعيل اشتراكك فورًا.
+                </p>
+                <div
+                  style="margin-top: 25px; display: flex; flex-direction: column; gap: 20px; align-items: center; justify-content: center;">
+                  <div id="sub-plan-selection"
+                    style="display: flex; gap: 20px; align-items: center; justify-content: center; flex-wrap: wrap;">
+                    <label class="form-label" style="margin-bottom: 0; font-weight: bold; font-size: 1.05rem;">اختر
+                      الباقة:</label>
+                    <label class="checkbox-label"
+                      style="margin-bottom: 0; font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                      <input type="radio" name="selected-sub-plan" value="monthly" checked />
+                      <span class="checkmark"></span>
+                      <span>الباقة الشهرية (49 ج.م)</span>
+                    </label>
+                    <label class="checkbox-label"
+                      style="margin-bottom: 0; font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                      <input type="radio" name="selected-sub-plan" value="yearly" />
+                      <span class="checkmark"></span>
+                      <span>الباقة السنوية (499 ج.م)</span>
+                    </label>
+                  </div>
+                  <div style="text-align: center; width: 100%;">
+                    <button class="btn btn-primary" id="btn-whatsapp-paid"
+                      style="background: var(--color-primary, #1565C0); color: white; border: none; font-weight: bold; font-size: 1.25rem; padding: 14px 48px; border-radius: var(--radius-lg, 12px); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 15px rgba(21, 101, 192, 0.3); transition: all 0.2s ease;">
+                      <span>اشترك الآن</span>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5" style="transform: scaleX(-1);">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Check / Current status -->
+              <div
+                style="margin-top: 30px; padding: 15px; background: var(--bg-hover, #f8fafc); border-radius: 10px; border: 1px solid var(--border-color, #e2e8f0);">
+                <h4>حالة الاشتراك الحالي:</h4>
+                <div id="subscription-status" style="margin-top: 10px; font-size: 0.95rem;">
+                  جاري تحميل حالة الاشتراك...
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Duplex Creator (Front and Back) -->
+      <div class="tab-panel" id="tab-duplex">
+        <div class="duplex-container">
+          <!-- settings and upload card -->
+          <div class="content-card" id="duplex-settings-card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M9 3v18M15 3v18" />
+                </svg>
+                <h2>إعدادات كارت وجه وظهر 📇</h2>
+              </div>
+            </div>
+            <div class="card-body" style="padding: 20px;">
+              <div class="duplex-grid">
+                <!-- Front Side Upload -->
+                <div class="duplex-upload-box" id="duplex-front-zone">
+                  <div class="duplex-upload-preview" id="duplex-front-preview">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="upload-icon">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <path d="M21 15l-5-5L5 21" />
+                    </svg>
+                    <p class="upload-title">رفع ملف الوجه (Front)</p>
+                    <small class="upload-hint">اسحب وأفلت أو اضغط للاختيار</small>
+                  </div>
+                  <input type="file" id="duplex-front-input" accept="image/*,.pdf" style="display:none" />
+                </div>
+
+                <!-- Back Side Upload -->
+                <div class="duplex-upload-box" id="duplex-back-zone">
+                  <div class="duplex-upload-preview" id="duplex-back-preview">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="upload-icon">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <path d="M21 15l-5-5L5 21" />
+                    </svg>
+                    <p class="upload-title">رفع ملف الظهر (Back)</p>
+                    <small class="upload-hint">اسحب وأفلت أو اضغط للاختيار</small>
+                  </div>
+                  <input type="file" id="duplex-back-input" accept="image/*,.pdf" style="display:none" />
+                </div>
+
+                <!-- Card Params -->
+                <div class="duplex-form-panel">
+                  <div class="form-group">
+                    <label class="form-label">اسم المنتج</label>
+                    <input type="text" id="duplex-card-name" class="form-input" value="كارت شخصي وجه وظهر" />
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">عرض الكارت (سم)</label>
+                      <input type="number" id="duplex-card-width" class="form-input" value="9" min="1" max="100" step="0.1" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">ارتفاع الكارت (سم)</label>
+                      <input type="number" id="duplex-card-height" class="form-input" value="5.5" min="1" max="100" step="0.1" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Bleed الكارت (سم)</label>
+                      <input type="number" id="duplex-card-bleed" class="form-input" value="0.2" min="0" max="2" step="0.05" />
+                    </div>
+                    <div class="form-group" style="justify-content: flex-end; padding-bottom: 8px;">
+                      <label class="checkbox-label">
+                        <input type="checkbox" id="duplex-card-rotate" checked />
+                        <span class="checkmark"></span>
+                        السماح بالتدوير
+                      </label>
+                    </div>
+                  </div>
+                  <button class="btn btn-primary btn-lg" id="btn-duplex-calculate" style="width:100%; margin-top: 10px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                    </svg>
+                    احسب رص الوجه والظهر
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Results (hidden by default) -->
+          <div class="results-section" id="duplex-results-section" style="display:none">
+            <div class="stats-grid">
+              <div class="stat-card efficiency">
+                <div class="stat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+                <div class="stat-value" id="duplex-stat-efficiency">—</div>
+                <div class="stat-label">نسبة الاستغلال</div>
+              </div>
+              <div class="stat-card waste">
+                <div class="stat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" />
+                  </svg>
+                </div>
+                <div class="stat-value" id="duplex-stat-waste">—</div>
+                <div class="stat-label">نسبة الهالك</div>
+              </div>
+              <div class="stat-card pieces">
+                <div class="stat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="9" height="9" rx="1" />
+                    <rect x="13" y="3" width="9" height="9" rx="1" />
+                    <rect x="2" y="14" width="9" height="9" rx="1" />
+                    <rect x="13" y="14" width="9" height="9" rx="1" />
+                  </svg>
+                </div>
+                <div class="stat-value" id="duplex-stat-pieces">—</div>
+                <div class="stat-label">قطعة في الورقة</div>
+              </div>
+            </div>
+
+            <!-- Canvas card -->
+            <div class="canvas-section">
+              <div class="canvas-toolbar" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div class="canvas-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="20" rx="2" />
+                  </svg>
+                  <span>مخطط رص الوجه والظهر</span>
+                </div>
+
+                <div class="duplex-toggle-bar">
+                  <button class="duplex-toggle-btn active" id="btn-show-front">الوجه (Front)</button>
+                  <button class="duplex-toggle-btn" id="btn-show-back">الظهر (Back) 🔄</button>
+                </div>
+
+                <div class="canvas-controls">
+                  <button class="canvas-btn" id="duplex-zoom-in" title="تكبير">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                      <line x1="11" y1="8" x2="11" y2="14" />
+                      <line x1="8" y1="11" x2="14" y2="11" />
+                    </svg>
+                  </button>
+                  <button class="canvas-btn" id="duplex-zoom-out" title="تصغير">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                      <line x1="8" y1="11" x2="14" y2="11" />
+                    </svg>
+                  </button>
+                  <button class="canvas-btn" id="duplex-reset-view" title="إعادة ضبط العرض">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                    </svg>
+                  </button>
+                  <span class="zoom-label" id="duplex-zoom-label">100%</span>
+                  <div class="canvas-separator"></div>
+                  
+                  <button class="canvas-btn print-ready-btn" id="btn-duplex-export-pdf" title="تصدير ملف PDF وجه وظهر للطباعة">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                    تصدير PDF (300 DPI)
+                  </button>
+                  <button class="canvas-btn print-ready-btn" id="btn-duplex-export-jpg" title="تحميل الملفات كصور JPG">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <path d="M21 15l-5-5L5 21" />
+                    </svg>
+                    تصدير JPG (300 DPI)
+                  </button>
+                </div>
+              </div>
+              <div class="canvas-wrapper" id="duplex-canvas-wrapper">
+                <canvas id="duplex-canvas"></canvas>
+                <div class="canvas-tooltip" id="duplex-canvas-tooltip"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Booklet Creator -->
+      <div class="tab-panel" id="tab-booklet">
+        <!-- BookletCreator.init() builds this panel dynamically -->
+      </div>
+
+      <!-- TAB: Variable Data Printing (VDP) -->
+      <div class="tab-panel" id="tab-vdp">
+        <div class="vdp-container">
+
+          <!-- Step Progress Bar -->
+          <div class="vdp-steps-bar">
+            <div class="vdp-step active" id="vdp-step-1" data-step="1">
+              <span class="step-num">1</span>
+              <span class="step-label">قالب التصميم</span>
+            </div>
+            <div class="vdp-step" id="vdp-step-2" data-step="2">
+              <span class="step-num">2</span>
+              <span class="step-label">محرر المتغيرات</span>
+            </div>
+            <div class="vdp-step" id="vdp-step-3" data-step="3">
+              <span class="step-num">3</span>
+              <span class="step-label">جدول البيانات</span>
+            </div>
+            <div class="vdp-step" id="vdp-step-4" data-step="4">
+              <span class="step-num">4</span>
+              <span class="step-label">رفع الصور</span>
+            </div>
+            <div class="vdp-step" id="vdp-step-5" data-step="5">
+              <span class="step-num">5</span>
+              <span class="step-label">المعاينة والتصدير</span>
+            </div>
+          </div>
+
+          <!-- STEP 1: Upload Template -->
+          <div class="vdp-step-content active" id="vdp-step-1-content">
+            <div class="content-card">
+              <div class="card-header">
+                <div class="card-title">
+                  <h2>الخطوة 1: رفع قالب التصميم 🖼️</h2>
+                </div>
+              </div>
+              <div class="card-body" style="padding: 20px;">
+                <div class="vdp-upload-area" id="vdp-template-upload-zone">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                    style="width:64px;height:64px;opacity:0.6;margin-bottom:15px;color:var(--color-primary-500)">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                  </svg>
+                  <p style="font-weight:600;font-size:1.1rem;margin-bottom:5px;">اسحب وأفلت ملف التصميم هنا أو اضغط
+                    للاختيار</p>
+                  <small style="color:var(--text-muted)">الصيغ المدعومة: PNG, JPG, JPEG, SVG, PDF (سجلات فردية)</small>
+                  <input type="file" id="vdp-template-file" accept=".png,.jpg,.jpeg,.svg,.pdf" style="display:none;" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2: Template Editor -->
+          <div class="vdp-step-content" id="vdp-step-2-content">
+            <div class="vdp-editor-layout">
+              <!-- Sidebar Controls -->
+              <div class="vdp-editor-sidebar">
+                <div class="content-card">
+                  <div class="card-header">
+                    <h2>أدوات التصميم 🛠️</h2>
+                  </div>
+                  <div class="card-body" style="padding: 15px; display:flex; flex-direction:column; gap:15px;">
+                    <div>
+                      <h3 style="margin-bottom:8px;font-size:0.9rem;">إضافة حقل متغير:</h3>
+                      <div class="vdp-add-buttons">
+                        <button class="btn btn-secondary btn-sm" id="vdp-add-text-btn">🔤 حقل نصي</button>
+                        <button class="btn btn-secondary btn-sm" id="vdp-add-image-btn">🖼️ حقل صورة</button>
+                        <button class="btn btn-secondary btn-sm" id="vdp-add-qr-btn">🏁 رمز QR</button>
+                        <button class="btn btn-secondary btn-sm" id="vdp-add-barcode-btn">📊 باركود</button>
+                      </div>
+                    </div>
+
+                    <!-- Fields Properties Panel -->
+                    <div id="vdp-properties-section"
+                      style="display:none; border-top:1px dashed var(--border-color); padding-top:15px;">
+                      <h3 style="margin-bottom:8px;font-size:0.9rem;">خصائص العنصر المحدد:</h3>
+                      <div id="vdp-properties-form">
+                        <div class="form-group">
+                          <label class="form-label" for="vdp-prop-name">اسم المتغير (مثل: {{Name}})</label>
+                          <input type="text" id="vdp-prop-name" class="form-input" />
+                        </div>
+
+                        <!-- Text fields properties -->
+                        <div id="vdp-text-properties" style="display:none;">
+                          <div class="form-row">
+                            <div class="form-group">
+                              <label class="form-label" for="vdp-prop-font-size">الحجم (بكسل)</label>
+                              <input type="number" id="vdp-prop-font-size" class="form-input" min="6" max="200"
+                                value="18" />
+                            </div>
+                            <div class="form-group">
+                              <label class="form-label" for="vdp-prop-color">اللون</label>
+                              <input type="color" id="vdp-prop-color" class="form-input color-input" value="#000000"
+                                style="padding:0;height:38px;width:100%;" />
+                            </div>
+                          </div>
+                          <div class="form-group">
+                            <label class="form-label" for="vdp-prop-align">المحاذاة</label>
+                            <select id="vdp-prop-align" class="form-select">
+                              <option value="right">يمين</option>
+                              <option value="center">وسط</option>
+                              <option value="left">يسار</option>
+                            </select>
+                          </div>
+                          <div class="form-group">
+                            <label class="form-label" for="vdp-prop-font-weight">الوزن</label>
+                            <select id="vdp-prop-font-weight" class="form-select">
+                              <option value="normal">عادي (Normal)</option>
+                              <option value="bold">عريض (Bold)</option>
+                            </select>
+                          </div>
+                          <div class="form-group">
+                            <label class="form-label" for="vdp-prop-font-family">نوع الخط (Font)</label>
+                            <select id="vdp-prop-font-family" class="form-select">
+                              <option value="Cairo">Cairo (الافتراضي)</option>
+                              <option value="IBM Plex Sans Arabic">IBM Plex Sans Arabic</option>
+                              <option value="Amiri">Amiri (أمييري)</option>
+                              <option value="Tajawal">Tajawal (تجول)</option>
+                              <option value="Almarai">Almarai (المراعي)</option>
+                              <option value="El Messiri">El Messiri (المسيري)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <!-- Image fields properties -->
+                        <div id="vdp-image-properties" style="display:none;">
+                          <div class="form-group">
+                            <label class="form-label" for="vdp-prop-fit">طريقة الاحتواء</label>
+                            <select id="vdp-prop-fit" class="form-select">
+                              <option value="contain">احتواء بنسب الأبعاد (Fit)</option>
+                              <option value="cover">ملء المساحة بالكامل (Fill)</option>
+                              <option value="fill">تمطيط بالكامل (Stretch)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <!-- Barcode fields properties -->
+                        <div id="vdp-barcode-properties" style="display:none;">
+                          <div class="form-group">
+                            <label class="form-label" for="vdp-prop-barcode-format">نوع الباركود</label>
+                            <select id="vdp-prop-barcode-format" class="form-select">
+                              <option value="CODE128">Code 128 (أحرف وأرقام)</option>
+                              <option value="EAN13">EAN 13 (أرقام فقط - 13 رقم)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <button class="btn btn-danger btn-block btn-sm" style="margin-top:15px;"
+                          id="vdp-delete-field-btn">🗑️ حذف الحقل</button>
+                      </div>
+                    </div>
+
+                    <div style="border-top:1px dashed var(--border-color); padding-top:15px;">
+                      <h3 style="margin-bottom:8px;font-size:0.9rem;">أبعاد الكارت الحقيقية:</h3>
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label class="form-label" for="vdp-card-width">العرض (سم)</label>
+                          <input type="number" id="vdp-card-width" class="form-input" value="9.0" min="1" max="100"
+                            step="0.1" />
+                        </div>
+                        <div class="form-group">
+                          <label class="form-label" for="vdp-card-height">الارتفاع (سم)</label>
+                          <input type="number" id="vdp-card-height" class="form-input" value="5.5" min="1" max="100"
+                            step="0.1" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Main Canvas Area -->
+              <div class="vdp-editor-main"
+                style="display: flex; flex-direction: column; align-items: stretch; gap: 10px; flex: 1;">
+                <!-- Zoom Toolbar for Variables Editor -->
+                <div class="vdp-editor-toolbar"
+                  style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 8px 15px; border: 1px solid var(--border-color); border-radius: var(--radius-md); gap: 10px; box-shadow: var(--shadow-sm);">
+                  <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">محرر التصميم 📐</div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="btn btn-secondary btn-xs" id="vdp-editor-zoom-out-btn" title="تصغير"
+                      style="padding: 4px 8px; display: flex; align-items: center; font-weight: bold;">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        style="width:12px; height:12px;">
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                    </button>
+                    <span id="vdp-editor-zoom-label"
+                      style="font-size: 0.85rem; font-weight: 700; min-width: 45px; text-align: center; color: var(--text-primary);">100%</span>
+                    <button class="btn btn-secondary btn-xs" id="vdp-editor-zoom-in-btn" title="تكبير"
+                      style="padding: 4px 8px; display: flex; align-items: center; font-weight: bold;">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        style="width:12px; height:12px;">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                    </button>
+                    <button class="btn btn-ghost btn-xs" id="vdp-editor-zoom-reset-btn"
+                      style="padding: 2px 8px; font-size: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px;">إعادة
+                      ضبط</button>
+                  </div>
+                </div>
+                <div class="vdp-canvas-wrapper" id="vdp-canvas-container"
+                  style="border:1px solid var(--border-color); background:#f1f5f9; overflow: auto; display: flex; justify-content: center; align-items: center; padding: 30px; width: 100%; min-height: 480px;">
+                  <canvas id="vdp-editor-canvas"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 3: Data Import -->
+          <div class="vdp-step-content" id="vdp-step-3-content">
+            <div class="content-card">
+              <div class="card-header">
+                <h2>الخطوة 3: جدول البيانات والمخططات 📊</h2>
+              </div>
+              <div class="card-body" style="padding:20px;">
+                <div class="vdp-data-tabs">
+                  <button class="vdp-tab-btn active" id="vdp-tab-excel-btn">📥 استيراد Excel / CSV</button>
+                  <button class="vdp-tab-btn" id="vdp-tab-manual-btn">✍️ إدخال يدوي</button>
+                </div>
+
+                <!-- Excel Tab Content -->
+                <div class="vdp-tab-content active" id="vdp-tab-excel-content">
+                  <div class="vdp-excel-upload-zone" id="vdp-excel-upload-zone">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                      style="width:48px;height:48px;opacity:0.6;margin-bottom:10px;color:var(--color-primary-500)">
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                    <p style="font-weight:600;">قم برفع ملف Excel (XLSX, XLS) أو ملف CSV</p>
+                    <small style="color:var(--text-muted)">سيتم استخراج الأعمدة والأسطر تلقائياً لتطابق
+                      المتغيرات</small>
+                    <input type="file" id="vdp-excel-file" accept=".xlsx,.xls,.csv" style="display:none;" />
+                  </div>
+
+                  <!-- Column Mapping Section -->
+                  <div id="vdp-mapping-section"
+                    style="display:none; margin-top:20px; border-top: 1px dashed var(--border-color); padding-top:20px;">
+                    <h3 style="margin-bottom:10px;">تطابق حقول القالب مع أعمدة البيانات (Field Mapping)</h3>
+                    <div id="vdp-mapping-list" class="vdp-mapping-grid">
+                      <!-- Dynamic mapping inputs -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Manual Entry Tab Content -->
+                <div class="vdp-tab-content" id="vdp-tab-manual-content">
+                  <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;">
+                    أدخل البيانات يدوياً في المربع أدناه. استخدم صيغة `اسم_الحقل: القيمة` مع سطر فارغ بين كل كارت وآخر:
+                  </p>
+                  <textarea id="vdp-manual-textarea" class="form-textarea" rows="12"
+                    placeholder="Name: John Smith&#10;Phone: 0101234567&#10;Photo: john.jpg&#10;Code: AR-901&#10;&#10;Name: David Lee&#10;Phone: 0119876543&#10;Photo: david.png&#10;Code: AR-902"></textarea>
+                  <button class="btn btn-primary" style="margin-top:15px;" id="vdp-process-manual-btn">تطبيق البيانات
+                    اليدوية</button>
+                </div>
+
+                <!-- Preview Records Count -->
+                <div id="vdp-data-summary"
+                  style="margin-top:20px; display:none; padding:12px 18px; background:rgba(34,197,94,0.1); color:#16a34a; border-radius:8px; font-weight:600; font-size:0.9rem; border:1px solid rgba(34,197,94,0.2)">
+                  🎉 تم معالجة البيانات بنجاح وعثرنا على <span id="vdp-total-records-count"
+                    style="font-size:1.1rem;font-weight:700;">0</span> سجلات للطباعة.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 4: Photo Upload -->
+          <div class="vdp-step-content" id="vdp-step-4-content">
+            <div class="content-card">
+              <div class="card-header">
+                <h2>الخطوة 4: رفع صور المستخدمين (الصور الشخصية المتغيرة) 🖼️</h2>
+              </div>
+              <div class="card-body" style="padding:20px;">
+                <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:15px;">
+                  إذا قمت بتعريف حقل متغير للصور (مثل `{{Photo}}` أو `{{PhotoPlace}}`)، قم برفع الصور هنا دفعة واحدة.
+                  سيقوم النظام بمطابقة اسم كل صورة مع القيمة المدخلة في عمود الصور بملف الـ Excel تلقائياً.
+                </p>
+                <div class="vdp-photos-upload-zone" id="vdp-photos-upload-zone">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                    style="width:48px;height:48px;opacity:0.6;margin-bottom:10px;color:var(--color-primary-500)">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                  </svg>
+                  <p style="font-weight:600;">اضغط لاختيار صور متعددة معاً أو اسحبها هنا</p>
+                  <small style="color:var(--text-muted)">الصيغ المدعومة: JPG, JPEG, PNG, WEBP</small>
+                  <input type="file" id="vdp-photos-files" accept=".png,.jpg,.jpeg,.webp" style="display:none;"
+                    multiple />
+                </div>
+
+                <div id="vdp-photos-status" style="margin-top:20px; display:none;">
+                  <h3 style="margin-bottom:10px;">الصور المرفوعة حالياً في الجلسة:</h3>
+                  <div class="vdp-photos-list" id="vdp-uploaded-photos-list">
+                    <!-- Images listed here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 5: Live Preview & Export -->
+          <div class="vdp-step-content" id="vdp-step-5-content">
+            <div class="vdp-preview-layout">
+              <!-- Live Card Preview Panel -->
+              <div class="vdp-preview-card-panel">
+                <div class="content-card">
+                  <div class="card-header">
+                    <h2>معاينة الكروت الفردية المتغيرة 🔍</h2>
+                  </div>
+                  <div class="vdp-preview-canvas-container" style="background:#e2e8f0; border-radius: 0 0 8px 8px;">
+                    <canvas id="vdp-preview-canvas"></canvas>
+                  </div>
+                  <div class="vdp-preview-controls"
+                    style="display: flex; flex-direction: column; gap: 12px; align-items: center; padding: 15px;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                      <button class="btn btn-secondary btn-sm" id="vdp-prev-btn">◀ السجل السابق</button>
+                      <span id="vdp-current-record-indicator" style="font-weight:600;color:var(--text-primary);">السجل 1
+                        من 1</span>
+                      <button class="btn btn-secondary btn-sm" id="vdp-next-btn">السجل التالي ▶</button>
+                    </div>
+                    <!-- Zoom Controls -->
+                    <div class="vdp-zoom-controls"
+                      style="display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--border-color); padding-top: 10px; width: 100%; justify-content: center;">
+                      <button class="btn btn-secondary btn-xs" id="vdp-zoom-out-btn" title="تصغير"
+                        style="padding: 4px 8px; font-weight: bold; display: flex; align-items: center;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                          style="width:12px; height:12px;">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                      <span id="vdp-preview-zoom-label"
+                        style="font-size: 0.85rem; font-weight: 700; min-width: 45px; text-align: center; color: var(--text-primary);">100%</span>
+                      <button class="btn btn-secondary btn-xs" id="vdp-zoom-in-btn" title="تكبير"
+                        style="padding: 4px 8px; font-weight: bold; display: flex; align-items: center;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                          style="width:12px; height:12px;">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                      <button class="btn btn-ghost btn-xs" id="vdp-zoom-reset-btn"
+                        style="padding: 2px 8px; font-size: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px;">إعادة
+                        ضبط</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Export Controls Panel -->
+              <div class="vdp-preview-export-panel">
+                <div class="content-card">
+                  <div class="card-header">
+                    <h2>خيارات التصدير والطباعة ⚙️</h2>
+                  </div>
+                  <div class="card-body" style="padding:20px; display:flex; flex-direction:column; gap:15px;">
+
+                    <div class="form-group">
+                      <label class="form-label">الإنتاج كملفات فردية:</label>
+                      <button class="btn btn-secondary btn-block btn-sm" id="vdp-export-zip-btn">📦 تصدير كافة الكروت كـ
+                        ZIP (صور PNG)</button>
+                      <button class="btn btn-secondary btn-block btn-sm" id="vdp-export-pdf-seq-btn">📄 تصدير كـ PDF
+                        متسلسل (صفحة لكل كارت)</button>
+                    </div>
+
+                    <div style="border-top:1px dashed var(--border-color); padding-top:15px;">
+                      <h3 style="margin-bottom:10px;font-size:0.95rem;">توزيع وفرض الكروت تلقائياً على الفرخ
+                        (Imposition):</h3>
+                      <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px;line-height:1.5;">
+                        يقوم هذا الخيار بتجميع كافة الكروت المخصصة ورصها تلقائياً على أفرخ الطباعة الكبيرة لتقليل
+                        الهالك، باستخدام إعدادات الفرخ والـ Bleed والـ Gutter الحالية.
+                      </p>
+
+                      <button class="btn btn-primary btn-block" id="vdp-impose-btn">☑️ رص وتوزيع تلقائي وتصدير PDF
+                        الطباعة</button>
+                    </div>
+
+                    <!-- Project Saving Section -->
+                    <div style="border-top:1px dashed var(--border-color); padding-top:15px;"
+                      id="vdp-save-project-section">
+                      <h3 style="margin-bottom:10px;font-size:0.95rem;">حفظ المشروع سحابياً:</h3>
+                      <button class="btn btn-success btn-block" id="vdp-save-db-btn"
+                        style="background:#16a34a; color:white;">💾 حفظ مشروع الـ VDP سحابياً</button>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Wizard Footer Buttons -->
+          <div class="vdp-wizard-footer">
+            <button class="btn btn-ghost" id="vdp-prev-step-btn" style="visibility:hidden;">السابق</button>
+            <button class="btn btn-primary" id="vdp-next-step-btn">التالي</button>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- Add/Edit Product Modal -->
+  <div class="modal-overlay" id="modal-product" role="dialog" aria-modal="true" aria-labelledby="modal-product-title">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3 id="modal-product-title">إضافة منتج</h3>
+        <button class="modal-close" data-close="modal-product">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Product type quick presets -->
+        <div class="form-group" style="display: none;">
+          <label class="form-label">نوع المنتج</label>
+          <div class="product-type-grid" id="product-types">
+            <button class="type-btn active" data-type="custom" data-w="" data-h="">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+              </svg>
+              مخصص
+            </button>
+            <button class="type-btn" data-type="business" data-w="9" data-h="5.5">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2" />
+                <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
+              </svg>
+              كرت شخصي
+            </button>
+            <button class="type-btn" data-type="flyer-a5" data-w="14.8" data-h="21">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              </svg>
+              فلاير A5
+            </button>
+            <button class="type-btn" data-type="flyer-a6" data-w="10.5" data-h="14.8">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              </svg>
+              فلاير A6
+            </button>
+            <button class="type-btn" data-type="brochure" data-w="21" data-h="29.7">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+              </svg>
+              بروشور A4
+            </button>
+            <button class="type-btn" data-type="sticker-small" data-w="5" data-h="5">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path
+                  d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32" />
+              </svg>
+              ستيكر صغير
+            </button>
+            <button class="type-btn" data-type="sticker-rect" data-w="10" data-h="6">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="4" width="22" height="16" rx="2" />
+              </svg>
+              ستيكر مستطيل
+            </button>
+            <button class="type-btn" data-type="postcard" data-w="15" data-h="10">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="4" width="22" height="16" rx="2" />
+                <line x1="1" y1="10" x2="23" y2="10" />
+              </svg>
+              بطاقة بريدية
+            </button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label class="form-label" for="product-name">اسم المنتج</label>
+            <input type="text" id="product-name" class="form-input" placeholder="مثال: كرت شخصي شركة X" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="product-qty">الكمية</label>
+            <input type="number" id="product-qty" class="form-input" value="1000" min="1" step="1" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="product-width">العرض (<span class="unit-text">سم</span>)</label>
+            <input type="number" id="product-width" class="form-input" value="9" min="0.1" max="500" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="product-height">الارتفاع (<span class="unit-text">سم</span>)</label>
+            <input type="number" id="product-height" class="form-input" value="5.5" min="0.1" max="500" step="0.01" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="product-rotate" checked />
+              <span class="checkmark"></span>
+              السماح بالتدوير 90°
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="product-bleed-individual" />
+              <span class="checkmark"></span>
+              Bleed مخصص لهذا المنتج
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group" id="product-bleed-row" style="display:none">
+          <label class="form-label" for="product-bleed">Bleed المنتج (<span class="unit-text">سم</span>)</label>
+          <input type="number" id="product-bleed" class="form-input" value="0.3" min="0" max="2" step="0.05" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modal-product">إلغاء</button>
+        <button class="btn btn-primary" id="btn-save-product">حفظ المنتج</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Project Modal -->
+  <div class="modal-overlay" id="modal-save-project" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>حفظ المشروع</h3>
+        <button class="modal-close" data-close="modal-save-project">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="project-name">اسم المشروع</label>
+          <input type="text" id="project-name" class="form-input" placeholder="مثال: كروت شركة الفجر 2024" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="project-client">اسم العميل (اختياري)</label>
+          <input type="text" id="project-client" class="form-input" placeholder="اسم العميل أو الشركة" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="project-notes">ملاحظات (اختياري)</label>
+          <textarea id="project-notes" class="form-textarea" rows="3" placeholder="أي ملاحظات إضافية..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modal-save-project">إلغاء</button>
+        <button class="btn btn-primary" id="btn-confirm-save">حفظ المشروع</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison Modal -->
+  <div class="modal-overlay" id="modal-comparison" role="dialog" aria-modal="true">
+    <div class="modal modal-xl">
+      <div class="modal-header">
+        <h3>مقارنة أحجام الورق</h3>
+        <button class="modal-close" data-close="modal-comparison">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="comparison-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading-overlay" style="display:none">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <div class="loading-text" id="loading-text">جاري حساب الرص الأمثل...</div>
+      <div class="loading-progress">
+        <div class="loading-bar" id="loading-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preset Products Modal -->
+  <div class="modal-overlay" id="modal-preset-products" role="dialog" aria-modal="true">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3>اختر منتجاً جاهزاً</h3>
+        <button class="modal-close" data-close="modal-preset-products">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="preset-products-grid" id="preset-products-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Resize Modal -->
+  <div class="modal-overlay" id="modal-bulk-resize" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>تغيير مقاس جميع المنتجات</h3>
+        <button class="modal-close" data-close="modal-bulk-resize">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:16px;">
+          سيتم تطبيق هذا المقاس على جميع المنتجات الحالية المضافة في القائمة دفعة واحدة.
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="bulk-width">العرض الجديد (<span class="unit-text">سم</span>)</label>
+            <input type="number" id="bulk-width" class="form-input" min="0.1" step="0.1" placeholder="مثال: 9" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="bulk-height">الارتفاع الجديد (<span class="unit-text">سم</span>)</label>
+            <input type="number" id="bulk-height" class="form-input" min="0.1" step="0.1" placeholder="مثال: 5.5" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modal-bulk-resize">إلغاء</button>
+        <button class="btn btn-primary" id="btn-confirm-bulk-resize">تطبيق على الكل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Rotate Modal -->
+  <div class="modal-overlay" id="modal-bulk-rotate" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>التحكم في تدوير جميع المنتجات</h3>
+        <button class="modal-close" data-close="modal-bulk-rotate">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:16px;">
+          تحديد خيار التدوير سيسمح للبرنامج بتدوير التصاميم بنسبة 90 درجة لملء فرخ الرص بأفضل طريقة ممكنة وتقليل الهدر.
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="bulk-rotate-checkbox" checked />
+              <span class="checkmark"></span>
+              السماح بالتدوير 90° لجميع المنتجات
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modal-bulk-rotate">إلغاء</button>
+        <button class="btn btn-primary" id="btn-confirm-bulk-rotate">تطبيق على الكل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div class="modal-overlay" id="modal-auth" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="auth-modal-title">تسجيل الدخول / إنشاء حساب</h3>
+        <button class="modal-close" data-close="modal-auth">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Auth Mode Tabs -->
+        <div class="auth-tabs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+          <button type="button" class="btn btn-secondary btn-block" id="tab-auth-login" style="padding: 10px 0; font-weight: bold; border-radius: 8px; font-family: inherit; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;">تسجيل الدخول</button>
+          <button type="button" class="btn btn-primary btn-block" id="tab-auth-register" style="padding: 10px 0; font-weight: bold; border-radius: 8px; font-family: inherit; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease; margin-top: 0;">إنشاء حساب</button>
+        </div>
+        <div class="form-group" id="auth-name-group">
+          <label class="form-label" for="auth-name">الاسم كامل / اسم المطبعة</label>
+          <input type="text" id="auth-name" class="form-input" placeholder="اكتب اسمك الكامل أو اسم المطبعة" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="auth-email" id="auth-email-label">البريد الإلكتروني أو رقم الهاتف</label>
+          <input type="text" id="auth-email" class="form-input" placeholder="example@email.com أو 010xxxxxxx" />
+        </div>
+        <div class="form-group" id="auth-password-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label class="form-label" for="auth-password" style="margin-bottom: 0;">كلمة المرور</label>
+            <button type="button" id="btn-forgot-password"
+              style="background: none; border: none; padding: 0; font-size: 0.8rem; color: #1565C0; cursor: pointer; text-decoration: underline; font-family: inherit;">هل
+              نسيت كلمة المرور؟</button>
+          </div>
+          <input type="password" id="auth-password" class="form-input" placeholder="كلمة المرور الخاصة بك" />
+        </div>
+        <div id="auth-error-msg" style="color: #ef4444; font-size: 0.8rem; margin-top: 8px; display: none;"></div>
+        
+        <!-- Google Auth Option -->
+        <div class="auth-divider" id="auth-google-divider" style="display: flex; align-items: center; text-align: center; margin: 20px 0; color: var(--text-secondary, #64748b);">
+          <span style="flex: 1; border-bottom: 1px solid var(--border-color, #e2e8f0);"></span>
+          <span style="padding: 0 10px; font-size: 0.85rem; font-weight: 500;">أو</span>
+          <span style="flex: 1; border-bottom: 1px solid var(--border-color, #e2e8f0);"></span>
+        </div>
+        <button type="button" class="btn btn-secondary btn-block" id="btn-google-auth" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px; font-weight: 600; border: 1px solid var(--border-color, #e2e8f0); background: var(--bg-card, #ffffff); color: var(--text-primary, #1e293b); width: 100%; box-sizing: border-box; cursor: pointer; border-radius: 8px; font-family: inherit; transition: all 0.2s ease;">
+          <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; flex-shrink: 0;" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+          </svg>
+          <span id="btn-google-auth-text">التسجيل بواسطة جوجل</span>
+        </button>
+      </div>
+      <div class="modal-footer"
+        style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 15px; align-items: center; flex-wrap: wrap;">
+        <a href="https://api.whatsapp.com/send?phone=201515034914&text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%20%D8%A7%D9%88%D8%AA%D9%88%20%D8%B1%D8%B5%20%D9%84%D8%AF%D9%8A%20%D9%85%D8%B4%D9%83%D9%84%D8%A9%20%D9%81%D9%8A%20%D8%AA%D8%B3%D8%AC%D9%8A%D9%84%20%D8%A7%D9%84%D8%AF%D8%AE%D9%88%D9%84"
+          target="_blank"
+          style="font-size: 0.8rem; color: #25D366; text-decoration: underline; font-weight: bold; margin-left: auto; display: flex; align-items: center; gap: 4px;">
+          تواصل مع الدعم الفني 💬
+        </a>
+        <button class="btn btn-ghost" id="btn-auth-switch" style="font-size:0.8rem;">إنشاء حساب جديد</button>
+        <button class="btn btn-primary" id="btn-auth-submit">دخول</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subscription Checkout Modal -->
+  <div class="modal-overlay" id="modal-checkout" role="dialog" aria-modal="true" style="z-index: 100000;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>تأكيد الاشتراك وتفعيل الحساب 💳</h3>
+        <button class="modal-close" data-close="modal-checkout">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Package Toggle Selection -->
+        <div class="form-group">
+          <label class="form-label">الباقة المطلوبة:</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px;">
+            <label class="preset-btn" id="checkout-plan-monthly-lbl"
+              style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+              <input type="radio" name="checkout-plan" id="checkout-plan-monthly" value="monthly" checked
+                style="margin: 0;" />
+              <span>شهري (49 ج.م)</span>
+            </label>
+            <label class="preset-btn" id="checkout-plan-yearly-lbl"
+              style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+              <input type="radio" name="checkout-plan" id="checkout-plan-yearly" value="yearly" style="margin: 0;" />
+              <span>سنوي (499 ج.م)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Wallet Details (Vodafone Cash) -->
+        <div
+          style="background: rgba(21, 101, 192, 0.05); border: 1px dashed var(--color-primary); border-radius: var(--radius-md); padding: 15px; margin-bottom: 20px; text-align: right;">
+          <h4 style="margin: 0 0 8px 0; color: var(--color-primary); font-size: 0.95rem; font-weight: 700;">طريقة الدفع
+            (فودافون كاش) 📱</h4>
+          <p style="font-size: 0.85rem; margin: 0 0 10px 0; line-height: 1.5; color: var(--text-secondary);">
+            قم بتحويل قيمة الاشتراك إلى رقم المحفظة التالي:
+          </p>
+          <div
+            style="display: flex; align-items: center; gap: 10px; background: var(--bg-card); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); justify-content: space-between;">
+            <strong id="checkout-wallet-number"
+              style="font-size: 1.15rem; color: #d32f2f; letter-spacing: 1px;">01091968846</strong>
+            <button class="btn btn-secondary btn-xs" id="btn-copy-wallet" style="padding: 4px 10px; font-size: 0.75rem;"
+              onclick="navigator.clipboard.writeText('01091968846'); window.AppUI?.showToast('تم نسخ رقم المحفظة!', 'success');">نسخ
+              📋</button>
+          </div>
+        </div>
+
+        <!-- Subscriber Information -->
+        <div class="form-group">
+          <label class="form-label" for="checkout-name">الاسم / اسم المطبعة</label>
+          <input type="text" id="checkout-name" class="form-input" placeholder="اسمك الكامل أو اسم المطبعة" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="checkout-phone">رقم الهاتف المحول منه</label>
+          <input type="text" id="checkout-phone" class="form-input" placeholder="رقم المحفظة التي قمت بالتحويل منها" />
+        </div>
+
+        <!-- Coupon / Discount Code -->
+        <div class="form-group">
+          <label class="form-label" for="checkout-coupon">كود الخصم (إن وجد)</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="checkout-coupon" class="form-input" style="flex: 1; text-transform: uppercase;"
+              placeholder="أدخل كود الخصم هنا" />
+            <button class="btn btn-secondary" id="btn-apply-coupon" style="padding: 0 16px;">تطبيق</button>
+          </div>
+          <div id="checkout-coupon-status" style="font-size: 0.8rem; margin-top: 6px; display: none;"></div>
+        </div>
+
+        <!-- Pricing Summary -->
+        <div
+          style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 700; font-size: 0.95rem;">المبلغ الإجمالي للدفع:</span>
+          <div style="text-align: left;">
+            <span id="checkout-price-original"
+              style="font-size: 0.9rem; text-decoration: line-through; color: var(--text-secondary); margin-left: 8px; display: none;"></span>
+            <span id="checkout-price-final" style="font-size: 1.3rem; font-weight: 800; color: var(--color-primary);">49
+              ج.م</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="padding-top: 15px;">
+        <button class="btn btn-ghost" data-close="modal-checkout">إلغاء</button>
+        <button class="btn btn-success" id="btn-confirm-checkout"
+          style="background: #25d366; color: white; border: none; font-weight: bold; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+          تأكيد الاشتراك عبر واتساب 💬
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paywall Overlay -->
+  <div class="paywall-overlay" id="paywall-overlay" style="display:none">
+    <div class="paywall-container">
+      <div class="paywall-header">
+        <svg class="paywall-logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="36" height="36" rx="8" fill="url(#paywallGrad)" />
+          <rect x="8" y="8" width="10" height="14" rx="2" fill="white" opacity="0.9" />
+          <rect x="8" y="24" width="10" height="8" rx="2" fill="white" opacity="0.6" />
+          <rect x="21" y="8" width="11" height="8" rx="2" fill="white" opacity="0.7" />
+          <rect x="21" y="18" width="11" height="14" rx="2" fill="white" opacity="0.9" />
+          <defs>
+            <linearGradient id="paywallGrad" x1="0" y1="0" x2="40" y2="40">
+              <stop offset="0%" stop-color="#1565C0" />
+              <stop offset="100%" stop-color="#0D47A1" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <h2>يرجى الاشتراك لمتابعة العمل 🔒</h2>
+        <p>لقد انتهت الفترة التجريبية المجانية لـ <strong>اوتو رص</strong>. لمواصلة استخدام محرك الرص الاحترافي وتصدير
+          المخرجات بدون علامات مائية، يرجى الاشتراك في إحدى الباقات التالية:</p>
+      </div>
+
+      <div class="paywall-status" id="paywall-device-info">
+        معرف جهازك: <code id="paywall-device-id">loading...</code>
+      </div>
+
+      <!-- Pricing Plans -->
+      <div class="pricing-grid">
+        <!-- Monthly -->
+        <div class="pricing-card" id="plan-monthly">
+          <div class="pricing-badge">الأكثر مرونة</div>
+          <div class="plan-name">الاشتراك الشهري</div>
+          <div class="plan-price" style="text-align: center;">49 ج.م <span>/ شهرياً</span></div>
+          <p class="plan-desc">رص لا محدود للمنتجات، تصدير PDF بجودة 300 DPI بدون علامات مائية، دعم فني متكامل.</p>
+          <button class="btn btn-primary"
+            style="margin: 15px auto 0; display: block; max-width: 200px; width: 100%; text-align: center;"
+            onclick="window.ProtectionSystem.subscribePlan('monthly')">اشترك شهرياً</button>
+        </div>
+
+        <!-- Annual -->
+        <div class="pricing-card popular" id="plan-annual">
+          <div class="pricing-badge">توفير كبير</div>
+          <div class="plan-name">الاشتراك السنوي</div>
+          <div class="plan-price" style="text-align: center;">499 ج.م <span>/ سنوياً</span></div>
+          <p class="plan-desc">وفر الكثير مع الباقة السنوية! استمتع بجميع الميزات الاحترافية لمدة عام كامل بلا انقطاع.
+          </p>
+          <button class="btn btn-primary"
+            style="margin: 15px auto 0; display: block; max-width: 200px; width: 100%; text-align: center;"
+            onclick="window.ProtectionSystem.subscribePlan('annual')">اشترك سنوياً ووفر</button>
+        </div>
+      </div>
+
+      <!-- Payment instructions for paywall -->
+      <div class="activation-section">
+        <h3>طريقة الدفع الفودافون كاش 📱</h3>
+        <p style="font-size: 0.85rem; line-height: 1.5; margin-bottom: 8px;">
+          قم بتحويل قيمة الاشتراك (<strong>49 جنيه</strong> للشهري أو <strong>499 جنيه</strong> للسنوي) إلى الرقم التالي:<br>
+          <strong class="vodafone-number-badge">01091968846</strong><br>
+          ثم اضغط على زر <strong>"اشترك الآن"</strong> بالأسفل لتأكيد الدفع وتفعيل اشتراكك فورًا عبر واتساب.
+        </p>
+        <div
+          style="display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; margin-bottom: 12px; width: 100%;">
+          <div id="paywall-plan-selection"
+            style="display: flex; gap: 8px 12px; align-items: center; justify-content: center; flex-wrap: wrap; width: 100%; font-size: 0.85rem;">
+            <label class="form-label" style="margin-bottom: 0; font-weight: bold;">اختر الباقة:</label>
+            <label class="checkbox-label"
+              style="margin-bottom: 0; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+              <input type="radio" name="paywall-selected-sub-plan" value="monthly" checked />
+              <span class="checkmark"></span>
+              <span>الباقة الشهرية (49 ج.م)</span>
+            </label>
+            <label class="checkbox-label"
+              style="margin-bottom: 0; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+              <input type="radio" name="paywall-selected-sub-plan" value="yearly" />
+              <span class="checkmark"></span>
+              <span>الباقة السنوية (499 ج.م)</span>
+            </label>
+          </div>
+          <div style="text-align: center; width: 100%;">
+            <button class="btn btn-primary paywall-whatsapp-btn" id="btn-paywall-whatsapp">
+              <span>اشترك الآن</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                style="transform: scaleX(-1);">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subscription Activation Form -->
+      <div class="activation-section">
+        <h3>هل تم تفعيل اشتراكك بالفعل؟</h3>
+        <p>أدخل بريدك الإلكتروني المرتبط بالاشتراك لتفعيل حسابك على هذا المتصفح فورًا.</p>
+        <div class="activation-form">
+          <input type="email" id="subscriber-email" class="form-input" placeholder="اسمك@بريدك.com" />
+          <button class="btn btn-secondary" id="btn-activate-subscription">تفعيل الآن</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase App, Firestore, Auth, and App Check Compat - v10.14.1 -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
+
+  <!-- VDP External Libraries (Excel Parsing, QR Codes, Barcodes) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+
+  <!-- JS Files -->
+  <script src="js/packing.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/projects.js"></script>
+  <script src="js/calculator.js"></script>
+  <script src="js/ai-advisor.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/file-reader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@4/dist/fp.min.js"></script>
+  <script src="js/protection.js?v=4"></script>
+  <script src="js/booklet.js"></script>
+  <script src="js/vdp.js"></script>
+  <script src="js/duplex.js"></script>
+  <script src="js/app.js"></script>
+  <!-- Preload fonts to ensure they are loaded for canvas rendering -->
+  <div style="font-family: 'Cairo'; position: absolute; visibility: hidden; pointer-events: none;">.</div>
+  <div style="font-family: 'IBM Plex Sans Arabic'; position: absolute; visibility: hidden; pointer-events: none;">.
+  </div>
+  <div style="font-family: 'Amiri'; position: absolute; visibility: hidden; pointer-events: none;">.</div>
+  <div style="font-family: 'Tajawal'; position: absolute; visibility: hidden; pointer-events: none;">.</div>
+  <div style="font-family: 'Almarai'; position: absolute; visibility: hidden; pointer-events: none;">.</div>
+  <!-- Floating Contact Support Widget (Draggable & Closeable) -->
+  <div id="support-widget" class="support-widget" style="display: flex;">
+    <button id="btn-close-support" class="close-support-btn" title="إخفاء الدعم">✕</button>
+    <a href="https://api.whatsapp.com/send?phone=201515034914&text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%20%D8%A7%D9%88%D8%AA%D9%88%20%D8%B1%D8%B5%20%D9%84%D8%AF%D9%8A%20%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%A3%D9%88%20%D9%85%D8%B3%D8%A7%D8%B9%D8%AF%D8%A9%20%D9%81%D9%8A%20%D8%A7%D9%84%D9%86%D8%B8%D8%A7%D9%85"
+      target="_blank" class="support-float-btn" title="تواصل مع الدعم الفني">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.73-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.965C16.528 2.01 14.069.993 11.997.993 6.563.993 2.14 5.362 2.137 10.79c-.001 1.677.452 3.3 1.313 4.726L2.473 19.9l4.174-1.095zM17.56 15.65c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+      </svg>
+      <span>تواصل مع الدعم</span>
+    </a>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const widget = document.getElementById('support-widget');
+      const closeBtn = document.getElementById('btn-close-support');
+
+      if (widget) {
+        // إغلاق المصغرة وتخزين الحالة اختيارياً أو إخفاؤها فقط حتى التحديث القادم
+        closeBtn?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          widget.style.display = 'none';
+        });
+
+        // منطق السحب والإسقاط (Drag and Drop) يدعم الماوس واللمس للهاتف
+        let isDragging = false;
+        let startX, startY;
+        let initialLeft, initialTop;
+
+        const onStart = (e) => {
+          // السحب فقط عبر النقر الأيسر بالماوس أو اللمس
+          if (e.type === 'mousedown' && e.button !== 0) return;
+
+          // السماح بالضغط على زر الإغلاق وزر الواتساب وتخطي السحب
+          if (e.target.closest('#btn-close-support') || e.target.closest('.support-float-btn')) {
+            return;
+          }
+
+          isDragging = true;
+          const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+          const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
+          startX = clientX;
+          startY = clientY;
+
+          const rect = widget.getBoundingClientRect();
+          initialLeft = rect.left;
+          initialTop = rect.top;
+
+          // إزالة الانتقالات مؤقتاً لتجنب التأخير البصري أثناء السحب
+          widget.style.transition = 'none';
+          widget.style.bottom = 'auto';
+          widget.style.top = initialTop + 'px';
+          widget.style.left = initialLeft + 'px';
+
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onEnd);
+          document.addEventListener('touchmove', onMove, { passive: false });
+          document.addEventListener('touchend', onEnd);
+        };
+
+        const onMove = (e) => {
+          if (!isDragging) return;
+
+          // منع سحب الصفحة أثناء اللمس
+          if (e.type === 'touchmove') {
+            e.preventDefault();
+          }
+
+          const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+          const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+          const dx = clientX - startX;
+          const dy = clientY - startY;
+
+          let newLeft = initialLeft + dx;
+          let newTop = initialTop + dy;
+
+          // الحدود لمنع السحب خارج المتصفح
+          const maxLeft = window.innerWidth - widget.offsetWidth;
+          const maxTop = window.innerHeight - widget.offsetHeight;
+
+          newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+          newTop = Math.max(0, Math.min(newTop, maxTop));
+
+          widget.style.left = newLeft + 'px';
+          widget.style.top = newTop + 'px';
+        };
+
+        const onEnd = () => {
+          if (!isDragging) return;
+          isDragging = false;
+
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onEnd);
+          document.removeEventListener('touchmove', onMove);
+          document.removeEventListener('touchend', onEnd);
+        };
+
+        widget.addEventListener('mousedown', onStart);
+        widget.addEventListener('touchstart', onStart, { passive: true });
+      }
+    });
+  </script>
+
+  <!-- ===== MODAL: إضافة مقاس مخصص (بدلاً من prompt) ===== -->
+  <div id="modal-custom-preset" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.7); backdrop-filter:blur(6px); z-index:99998; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-card,#fff); border:1px solid var(--border-color,#e2e8f0); border-radius:16px; padding:28px 32px; max-width:420px; width:90%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.4); animation:modalEnter 0.3s cubic-bezier(0.16,1,0.3,1) forwards;">
+      <h3 style="margin:0 0 6px 0; font-size:1.15rem; font-weight:700;">📐 إضافة مقاس جاهز مخصص</h3>
+      <p style="margin:0 0 20px 0; font-size:0.85rem; color:var(--text-secondary,#64748b);">سيتم حفظ المقاس الحالي باسم مخصص لاستخدامه لاحقاً.</p>
+      <div class="form-group" style="margin-bottom:20px;">
+        <label class="form-label" for="custom-preset-name-input" style="display:block; margin-bottom:8px; font-weight:600;">اسم المقاس:</label>
+        <input type="text" id="custom-preset-name-input" class="form-input" placeholder="مثال: فرخ كوشيه، كرتون A3..." style="width:100%; box-sizing:border-box;" maxlength="30" />
+        <small id="custom-preset-error" style="color:#ef4444; font-size:0.8rem; display:none; margin-top:4px; display:block;"></small>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button class="btn btn-secondary" id="btn-cancel-custom-preset">إلغاء</button>
+        <button class="btn btn-primary" id="btn-confirm-custom-preset">إضافة المقاس ✓</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+
+</html>

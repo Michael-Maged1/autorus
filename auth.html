@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow" />
+  <!-- PWA Settings -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1565C0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="أوتو رص" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40' fill='none'%3E%3Crect x='2' y='2' width='36' height='36' rx='8' fill='url(%23logoGrad)'/%3E%3Crect x='8' y='8' width='10' height='14' rx='2' fill='white' opacity='0.9'/%3E%3Crect x='8' y='24' width='10' height='8' rx='2' fill='white' opacity='0.6'/%3E%3Crect x='21' y='8' width='11' height='8' rx='2' fill='white' opacity='0.7'/%3E%3Crect x='21' y='18' width='11' height='14' rx='2' fill='white' opacity='0.9'/%3E%3Cdefs%3E%3ClinearGradient id='logoGrad' x1='0' y1='0' x2='40' y2='40'%3E%3Cstop offset='0%25' stop-color='%231565C0'/%3E%3Cstop offset='100%25' stop-color='%230D47A1'/%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E" />
+  <title>أوتو رص - الحساب والترخيص</title>
+  
+  <!-- Google Fonts: Cairo & IBM Plex Sans Arabic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- CSS References -->
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+
+  <!-- Custom Auth Page Styling -->
+  <style>
+    body {
+      background: var(--bg-app, #f8fafc);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+    }
+    
+    .auth-nav {
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color, #e2e8f0);
+      background: var(--bg-card, #ffffff);
+    }
+
+    .dark-mode .auth-nav {
+      background: #1e293b;
+      border-color: #334155;
+    }
+
+    .icon-btn {
+      background: var(--bg-hover, #f1f5f9) !important;
+      border: 1px solid var(--border-color, #e2e8f0) !important;
+      color: var(--text-primary, #1e293b) !important;
+    }
+    .icon-btn:hover {
+      background: var(--bg-active, #e2e8f0) !important;
+    }
+
+    .auth-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      width: 35px;
+      height: 35px;
+    }
+
+    .brand-title {
+      font-weight: 700;
+      color: var(--text-primary, #1e293b);
+      font-size: 1.2rem;
+    }
+
+    .auth-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .auth-card {
+      background: var(--bg-card, #ffffff);
+      border: 1px solid var(--border-color, #e2e8f0);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+      width: 100%;
+      max-width: 440px;
+      padding: 40px;
+      box-sizing: border-box;
+      transition: all 0.3s ease;
+    }
+
+    .dark-mode .auth-card {
+      background: #1e293b;
+      border-color: #334155;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .auth-header h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      color: var(--text-primary, #1e293b);
+    }
+
+    .auth-header p {
+      font-size: 0.9rem;
+      color: var(--text-secondary, #64748b);
+      margin: 0;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .btn-block {
+      display: block;
+      width: 100%;
+    }
+
+    .auth-footer {
+      text-align: center;
+      margin-top: 25px;
+      border-top: 1px dashed var(--border-color, #e2e8f0);
+      padding-top: 20px;
+    }
+
+    .dark-mode .auth-footer {
+      border-color: #334155;
+    }
+
+    .auth-error {
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      color: #ef4444;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .dark-mode .auth-error {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    @media (max-width: 480px) {
+      .auth-nav {
+        padding: 15px 20px;
+      }
+      .auth-container {
+        padding: 20px 10px;
+      }
+      .auth-card {
+        padding: 25px 20px;
+        border-radius: 12px;
+      }
+      .auth-header {
+        margin-bottom: 20px;
+      }
+      .auth-header h2 {
+        font-size: 1.35rem;
+      }
+    }
+  </style>
+</head>
+<body class="light-mode" id="app-body">
+  <script>
+    (function() {
+      try {
+        var theme = localStorage.getItem('theme') || 'light';
+        document.body.classList.remove('light-mode', 'dark-mode');
+        document.body.classList.add(theme === 'dark' ? 'dark-mode' : 'light-mode');
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  </script>
+
+  <!-- NAVIGATION HEADER -->
+  <nav class="auth-nav">
+    <a href="index.html" class="auth-brand">
+      <svg class="brand-logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="36" height="36" rx="8" fill="url(#logoGrad)" />
+        <rect x="8" y="8" width="10" height="14" rx="2" fill="white" opacity="0.9" />
+        <rect x="8" y="24" width="10" height="8" rx="2" fill="white" opacity="0.6" />
+        <rect x="21" y="8" width="11" height="8" rx="2" fill="white" opacity="0.7" />
+        <rect x="21" y="18" width="11" height="14" rx="2" fill="white" opacity="0.9" />
+        <defs>
+          <linearGradient id="logoGrad" x1="0" y1="0" x2="40" y2="40">
+            <stop offset="0%" stop-color="#1565C0" />
+            <stop offset="100%" stop-color="#0D47A1" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <span class="brand-title">اوتو رص</span>
+    </a>
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <button class="icon-btn" id="theme-toggle" title="تبديل الوضع الليلي" aria-label="تبديل الوضع الليلي">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5" />
+          <line x1="12" y1="1" x2="12" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" />
+          <line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        </svg>
+      </button>
+      <a href="index.html" class="btn btn-ghost btn-sm">← العودة للرئيسية</a>
+    </div>
+  </nav>
+
+  <!-- AUTH MAIN CONTAINER -->
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h2 id="auth-modal-title">إنشاء حساب جديد</h2>
+        <p id="auth-subtitle">ابدأ تجربتك واستمتع بحفظ مشاريعك سحابياً</p>
+      </div>
+
+      <div class="auth-error" id="auth-error-msg"></div>
+
+      <!-- Auth Mode Tabs -->
+      <div class="auth-tabs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px;">
+        <button type="button" class="btn btn-secondary btn-block" id="tab-auth-login" style="padding: 10px 0; font-weight: bold; border-radius: 8px; font-family: inherit; font-size: 0.9rem; cursor: pointer; transition: all 0.2s ease;">تسجيل الدخول</button>
+        <button type="button" class="btn btn-primary btn-block" id="tab-auth-register" style="padding: 10px 0; font-weight: bold; border-radius: 8px; font-family: inherit; font-size: 0.9rem; cursor: pointer; transition: all 0.2s ease; margin-top: 0;">إنشاء حساب جديد</button>
+      </div>
+
+      <!-- Auth Inputs -->
+      <div class="form-group" id="auth-name-group">
+        <label class="form-label" for="auth-name">الاسم كامل / اسم المطبعة</label>
+        <input type="text" id="auth-name" class="form-input" placeholder="اكتب اسمك الكامل أو اسم المطبعة" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="auth-email" id="auth-email-label">البريد الإلكتروني أو رقم الهاتف</label>
+        <input type="text" id="auth-email" class="form-input" placeholder="example@email.com أو 010xxxxxxx" required />
+      </div>
+      <div class="form-group" style="margin-bottom: 25px;" id="auth-password-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <label class="form-label" for="auth-password" style="margin-bottom: 0;">كلمة المرور</label>
+          <button type="button" id="btn-forgot-password" style="background: none; border: none; padding: 0; font-size: 0.85rem; color: #1565C0; cursor: pointer; text-decoration: underline; font-family: inherit;">هل نسيت كلمة المرور؟</button>
+        </div>
+        <input type="password" id="auth-password" class="form-input" placeholder="كلمة المرور الخاصة بك" required />
+      </div>
+
+      <!-- Submit Actions -->
+      <button class="btn btn-primary btn-block" id="btn-auth-submit" style="padding: 12px; font-weight: bold; font-size: 1rem;">إنشاء حساب</button>
+
+      <!-- Google Auth Option -->
+      <div class="auth-divider" id="auth-google-divider" style="display: flex; align-items: center; text-align: center; margin: 20px 0; color: var(--text-secondary, #64748b);">
+        <span style="flex: 1; border-bottom: 1px solid var(--border-color, #e2e8f0);"></span>
+        <span style="padding: 0 10px; font-size: 0.85rem; font-weight: 500;">أو</span>
+        <span style="flex: 1; border-bottom: 1px solid var(--border-color, #e2e8f0);"></span>
+      </div>
+      <button type="button" class="btn btn-secondary btn-block" id="btn-google-auth" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; font-weight: 600; border: 1px solid var(--border-color, #e2e8f0); background: var(--bg-card, #ffffff); color: var(--text-primary, #1e293b); width: 100%; box-sizing: border-box; cursor: pointer; border-radius: 8px; font-family: inherit; transition: all 0.2s ease; margin-bottom: 20px;">
+        <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; flex-shrink: 0;" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+        </svg>
+        <span id="btn-google-auth-text">التسجيل بواسطة جوجل</span>
+      </button>
+
+      <!-- Switch & Fallback -->
+      <div class="auth-footer" style="display: flex; flex-direction: column; gap: 10px;">
+        <button class="btn btn-ghost btn-block" id="btn-auth-switch" style="font-size: 0.9rem;">لديك حساب بالفعل؟ تسجيل الدخول</button>
+        <a href="https://api.whatsapp.com/send?phone=201515034914&text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%20%D8%A7%D9%88%D8%AA%D9%88%20%D8%B1%D8%B5%20%D9%84%D8%AF%D9%8A%20%D9%85%D8%B4%D9%83%D9%84%D8%A9%20%D9%81%D9%8A%20%D8%AA%D8%B3%D8%AC%D9%8A%D9%84%20%D8%A7%D9%84%D8%AF%D8%AE%D9%88%D9%84" 
+           target="_blank" 
+           class="btn btn-secondary btn-block" 
+           style="font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(37, 211, 102, 0.1); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.2);">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width: 18px; height: 18px;">
+            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.73-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.965C16.528 2.01 14.069.993 11.997.993 6.563.993 2.14 5.362 2.137 10.79c-.001 1.677.452 3.3 1.313 4.726L2.473 19.9l4.174-1.095zM17.56 15.65c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+          </svg>
+          تواصل مع الدعم الفني
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase App, Firestore, Auth, and App Check Compat - v10.14.1 -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
+
+  <!-- Protection logic script -->
+  <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@4/dist/fp.min.js"></script>
+  <script src="js/protection.js?v=4"></script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize the protection system (it will apply the synchronized theme automatically)
+      if (window.ProtectionSystem) {
+        window.ProtectionSystem.init();
+      }
+
+      // Toggle theme functionality
+      document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        document.body.classList.remove('light-mode', 'dark-mode');
+        document.body.classList.add(newTheme === 'dark' ? 'dark-mode' : 'light-mode');
+        localStorage.setItem('theme', newTheme);
+        
+        // Also update Firestore settings if user is logged in
+        if (window.ProtectionSystem) {
+          const activeState = window.ProtectionSystem.getState();
+          const uid = activeState.userType === 'registered' ? activeState.userId : activeState.guestId;
+          const collectionName = activeState.userType === 'registered' ? 'users' : 'guests';
+          if (uid && typeof firebase !== 'undefined' && firebase.apps.length) {
+            firebase.firestore().collection(collectionName).doc(uid).set({
+              settings: { theme: newTheme }
+            }, { merge: true }).catch(err => console.warn("Failed to sync theme to Firestore:", err));
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
