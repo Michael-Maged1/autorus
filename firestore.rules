@@ -41,7 +41,7 @@ service cloud.firestore {
       allow update: if isAdmin() || (
         isOwner(userId) &&
         !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['isPaid', 'isBlocked', 'subscriptionEnd'])
+          .hasAny(['isPaid', 'isBlocked', 'subscriptionEnd', 'maxDevices'])
       );
 
       // الحذف للأدمن فقط

@@ -361,11 +361,13 @@ const ProtectionSystem = (() => {
       };
 
       const sessionKey = `autorass_loc_fetched_${id}`;
+      let loc = null;
       if (!sessionStorage.getItem(sessionKey)) {
         try {
-          const loc = await fetchLocationData();
+          loc = await fetchLocationData();
           if (loc) {
             updateData.locationInfo = loc;
+            state.locationInfo = loc;
             sessionStorage.setItem(sessionKey, 'true');
           }
         } catch (e) {
@@ -373,7 +375,22 @@ const ProtectionSystem = (() => {
         }
       }
 
-      await docRef.set(updateData, { merge: true });
+      if (isRegistered && state.deviceId) {
+        // Update specific device in activeDevices map using nested dot notation
+        const devPath = `activeDevices.${state.deviceId}`;
+        updateData[`${devPath}.lastActive`] = firebase.firestore.FieldValue.serverTimestamp();
+        updateData[`${devPath}.userAgent`] = navigator.userAgent;
+        if (loc || state.locationInfo) {
+          const locationToSave = loc || state.locationInfo;
+          updateData[`${devPath}.ip`] = locationToSave.ip || '';
+          updateData[`${devPath}.city`] = locationToSave.city || '';
+          updateData[`${devPath}.country`] = locationToSave.country || '';
+          updateData[`${devPath}.countryCode`] = locationToSave.countryCode || '';
+        }
+        await docRef.update(updateData);
+      } else {
+        await docRef.set(updateData, { merge: true });
+      }
       console.log(`Updated activity status (lastActive) for ${collectionName}/${id}`);
     } catch (e) {
       console.warn("Failed to update active status:", e);
@@ -534,20 +551,11 @@ const ProtectionSystem = (() => {
     }
 
     // إجبار المستخدمين على تسجيل الدخول إن لم يكونوا مسجلين
-    const currentPath = window.location.pathname.toLowerCase();
-    const currentHref = window.location.href.toLowerCase();
-    const isBypassPage = currentPath.includes('auth') || 
-                         currentPath.includes('subscription') || 
-                         currentPath.includes('admin') ||
-                         currentHref.includes('auth') ||
-                         currentHref.includes('subscription') ||
-                         currentHref.includes('admin');
+    const isBypassPage = window.location.pathname.includes('auth.html') || 
+                         window.location.pathname.includes('subscription.html') || 
+                         window.location.pathname.includes('admin.html');
     if (state.userType === 'guest' && !isBypassPage) {
-      // منع الـ redirect اللانهائي: إذا كان الـ referrer هو auth.html لا تعمل redirect
-      const referrer = document.referrer.toLowerCase();
-      if (!referrer.includes('auth')) {
-        window.location.replace('auth.html');
-      }
+      window.location.replace('auth.html');
     }
   }
 
@@ -641,14 +649,71 @@ const ProtectionSystem = (() => {
         // Concurrent session validation (only for logged in registered users)
         let isSessionKicked = false;
         if (userType === 'registered') {
-          if (data.activeDeviceId && data.activeDeviceId !== state.deviceId && sessionClaimed) {
-            isSessionKicked = true;
-          } else {
-            // Claim active session
-            if (data.activeDeviceId !== state.deviceId) {
-              await docRef.update({ activeDeviceId: state.deviceId });
+          const maxDevices = data.maxDevices !== undefined ? parseInt(data.maxDevices) : 1;
+          const activeDevices = data.activeDevices || {};
+          const deviceIds = Object.keys(activeDevices);
+          const currentDeviceExists = deviceIds.includes(state.deviceId);
+
+          if (sessionClaimed) {
+            // We have already claimed our session.
+            // If our device was removed from the active list, we are kicked out!
+            if (!currentDeviceExists) {
+              isSessionKicked = true;
             }
-            sessionClaimed = true;
+          } else {
+            // This is a new session claiming a slot
+            if (currentDeviceExists) {
+              // Device is already registered in active devices list, just update its last active time
+              const updateKey = `activeDevices.${state.deviceId}.lastActive`;
+              await docRef.update({
+                [updateKey]: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              sessionClaimed = true;
+            } else {
+              // Device is not registered yet. We must register it.
+              // Sort device IDs by lastActive timestamp (oldest first)
+              const sortedDevices = deviceIds.sort((a, b) => {
+                const devA = activeDevices[a] || {};
+                const devB = activeDevices[b] || {};
+                const timeA = devA.lastActive ? (devA.lastActive.toDate ? devA.lastActive.toDate().getTime() : new Date(devA.lastActive).getTime()) : 0;
+                const timeB = devB.lastActive ? (devB.lastActive.toDate ? devB.lastActive.toDate().getTime() : new Date(devB.lastActive).getTime()) : 0;
+                return timeA - timeB;
+              });
+
+              const updateObj = {};
+              // If we exceed or meet maxDevices limit, kick the oldest devices
+              // We need to keep total count < maxDevices before adding the new one
+              let count = sortedDevices.length;
+              while (count >= maxDevices && sortedDevices.length > 0) {
+                const oldestId = sortedDevices.shift();
+                updateObj[`activeDevices.${oldestId}`] = firebase.firestore.FieldValue.delete();
+                count--;
+              }
+
+              // Retrieve location data if available
+              const loc = state.locationInfo || (await fetchLocationData());
+              if (loc) {
+                state.locationInfo = loc;
+              }
+              
+              updateObj[`activeDevices.${state.deviceId}`] = {
+                lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+                ip: loc ? (loc.ip || '') : '',
+                city: loc ? (loc.city || '') : '',
+                country: loc ? (loc.country || '') : '',
+                countryCode: loc ? (loc.countryCode || '') : '',
+                userAgent: navigator.userAgent
+              };
+              updateObj.activeDeviceId = state.deviceId; // Keep activeDeviceId synchronized for compatibility
+              
+              // Also store locationInfo at root level if not already present
+              if (!data.locationInfo && loc) {
+                updateObj.locationInfo = loc;
+              }
+
+              await docRef.update(updateObj);
+              sessionClaimed = true;
+            }
           }
         }
 
@@ -731,6 +796,18 @@ const ProtectionSystem = (() => {
 
         const trialExpires = startDate.getTime() + trialDays * 24 * 60 * 60 * 1000;
 
+        let loc = state.locationInfo;
+        if (!loc) {
+          try {
+            loc = await fetchLocationData();
+            if (loc) {
+              state.locationInfo = loc;
+            }
+          } catch (e) {
+            console.warn("Failed to fetch location on registration:", e);
+          }
+        }
+
         const newDoc = {
           name: userType === 'registered' ? (auth.currentUser.displayName || auth.currentUser.email.split('@')[0]) : 'زائر',
           email: userType === 'registered' ? auth.currentUser.email : null,
@@ -753,6 +830,25 @@ const ProtectionSystem = (() => {
             expireDate: subEnd || new Date(trialExpires)
           }
         };
+
+        if (loc) {
+          newDoc.locationInfo = loc;
+        }
+
+        if (userType === 'registered') {
+          newDoc.maxDevices = 1;
+          newDoc.activeDevices = {
+            [state.deviceId]: {
+              lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+              ip: loc ? (loc.ip || '') : '',
+              city: loc ? (loc.city || '') : '',
+              country: loc ? (loc.country || '') : '',
+              countryCode: loc ? (loc.countryCode || '') : '',
+              userAgent: navigator.userAgent
+            }
+          };
+          sessionClaimed = true;
+        }
         
         await docRef.set(newDoc);
         
@@ -1166,8 +1262,7 @@ const ProtectionSystem = (() => {
       deviceIdLabel.textContent = state.userId || state.guestId || state.deviceId || 'جاري استرداد المعرّف...';
     }
 
-    const _path = window.location.pathname.toLowerCase();
-    const isBypassPage = _path.includes('auth') || _path.includes('subscription') || _path.includes('admin');
+    const isBypassPage = window.location.pathname.includes('auth.html') || window.location.pathname.includes('subscription.html') || window.location.pathname.includes('admin.html');
 
     // إظهار لوحة التحكم للمشرفين فقط
     const btnAdminLink = document.getElementById('btn-admin-link');
@@ -2113,8 +2208,8 @@ const ProtectionSystem = (() => {
           state.userType = 'registered';
           await checkUserOrGuestSubscription(user.uid, 'registered');
           
-          // توجيه للرئيسية إذا كان مسجلاً بالدخول ومتواجد في صفحة auth
-          if (window.location.pathname.toLowerCase().includes('auth')) {
+          // توجيه للرئيسية إذا كان مسجلاً بالدخول ومتواجد في صفحة auth.html
+          if (window.location.pathname.includes('auth.html')) {
             window.location.replace('index.html');
           }
         } else {
@@ -2137,10 +2232,10 @@ const ProtectionSystem = (() => {
           }
 
           // إجبار المستخدمين غير المسجلين على الذهاب لـ auth.html
-          const _bypassPath = window.location.pathname.toLowerCase();
-          const _bypassHref = window.location.href.toLowerCase();
-          const isOnBypassPage = _bypassPath.includes('auth') || _bypassPath.includes('subscription') || _bypassPath.includes('admin') || _bypassHref.includes('auth') || _bypassHref.includes('subscription') || _bypassHref.includes('admin');
-          if (!isOnBypassPage) {
+          const isBypassPage = window.location.pathname.includes('auth.html') || 
+                               window.location.pathname.includes('subscription.html') || 
+                               window.location.pathname.includes('admin.html');
+          if (!isBypassPage) {
             window.location.replace('auth.html');
             return;
           }
